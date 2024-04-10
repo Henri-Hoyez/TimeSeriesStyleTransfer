@@ -1,0 +1,10 @@
+__pycache__
+data/Diligen
+data/Ternium
+preprocessing_notebooks/
+logs/*
+*.ipynb
+*.parquet
+*.h5
+*.png
+*.pdf
