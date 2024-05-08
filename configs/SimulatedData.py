@@ -10,12 +10,12 @@ class Proposed:
     sequence_lenght_in_sample = 64
     granularity = 1
     overlap= 0.25
-    epochs = 500
+    epochs = 1000
 
 
     n_feature = len(cols_on_interrest)
     seq_shape = (sequence_lenght_in_sample, n_feature)
-    batch_size = 16
+    batch_size = 20
 
     train_split = 0.7
     test_split  = 0.3
