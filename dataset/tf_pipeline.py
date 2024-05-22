@@ -42,7 +42,7 @@ def make_train_valid_dset(
         train_dset = train_dset.take(150*batch_size)
 
     if shuffle:
-        train_dset= train_dset.shuffle(256)
+        train_dset= train_dset.shuffle(20000)
 
     if batch_size > 0:
         train_dset = train_dset.batch(batch_size, drop_remainder=True)

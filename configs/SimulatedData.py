@@ -10,7 +10,7 @@ class Proposed:
     sequence_lenght_in_sample = 64
     granularity = 1
     overlap= 0.25
-    epochs = 1000
+    epochs = 20
 
 
     n_feature = len(cols_on_interrest)

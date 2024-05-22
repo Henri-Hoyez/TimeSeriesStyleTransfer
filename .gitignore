@@ -3,8 +3,12 @@ data/Diligen
 data/Ternium
 preprocessing_notebooks/
 logs/*
-*.ipynb
+logs.bck/*
+mlruns/
 *.parquet
 *.h5
 *.png
 *.pdf
+*.json
+*.xlsx
+.*yaml
