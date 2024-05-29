@@ -15,7 +15,7 @@ class MetricSimulatedData(Metric):
         super().__init__()
 
         self.signature_length = 32
-        self.sequence_to_generate = 20
+        self.sequence_to_generate = 500
 
         self.ins = [0, 1]
         self.outs =[2, 3, 4, 5]
