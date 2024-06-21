@@ -2,6 +2,7 @@ __pycache__
 data/Diligen
 data/Ternium
 preprocessing_notebooks/
+logs*
 logs/*
 logs.bck/*
 mlruns/
