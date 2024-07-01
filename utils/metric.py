@@ -2,12 +2,15 @@ import numpy as np
 from configs.Metric import Metric
 
 def optimized_cov(a,v):
+    _seq_len = a.shape[1]
     nan_mean_a = np.nanmean(a, axis=1).reshape((-1,1))
     nan_mean_b = np.nanmean(v, axis=1).reshape((-1,1))
     return np.nansum((a- nan_mean_a)* (v- nan_mean_b), axis=1)
 
 def mean_difference(a,v):
     return np.nanmean(a) - np.nanmean(v)
+
+     
 
 def optimized_windowed_cov(a, v, beta=Metric.mean_senssibility_factor):
     if a.shape[1] > v.shape[1]:
@@ -18,10 +21,17 @@ def optimized_windowed_cov(a, v, beta=Metric.mean_senssibility_factor):
     n = _a.shape[1]
     corrs = []
 
+    aa = optimized_cov(_a, _a)
     for k in range(_v.shape[1] - _a.shape[1]):
         __v = _v[:, k: n+k]
         # Compute the covariance 
-        augmented_cov = optimized_cov(_a,__v)+ beta* mean_difference(_a,__v)
+
+        av = optimized_cov(_a,__v)
+        vv = optimized_cov(__v, __v)
+        _mean_diff = beta* mean_difference(_a,__v)
+
+        augmented_cov = av/np.sqrt(aa*vv)+ _mean_diff
+        # /(np.sqrt(aa*vv)) 
 
         corrs.append(augmented_cov)
         
@@ -62,18 +72,27 @@ def signature_on_batch(x:np.ndarray, ins:list, outs:list, sig_seq_len:int):
 
 def signature_metric(source_sig:np.ndarray, target_sig:np.ndarray):
     # Shape: (n_features, sign_seq_lenght, 3)
-    min_source = source_sig[0]
-    max_source = source_sig[1]
-    mean_source = source_sig[2]
 
-    min_target = target_sig[0]
-    max_target = target_sig[1]
-    mean_target = target_sig[2]
+    averaged_source = np.mean(source_sig, axis=0)
+    averaged_target = np.mean(target_sig, axis=0)
 
-    mean_differences = np.mean(mean_target- mean_source)
+    min_source = averaged_source[:, 0]
+    max_source = averaged_source[:, 1]
+    mean_source = averaged_source[:, 2]
+
+    min_target = averaged_target[:, 0]
+    max_target = averaged_target[:, 1]
+    mean_target = averaged_target[:, 2]
+
+    mean_differences = np.mean(np.abs(mean_target- mean_source))
+    mins_differences = np.mean(np.abs(min_target- min_source))
+    maxs_differences = np.mean(np.abs(max_target- max_source))
+
+    mean_differences = np.mean([mean_differences, mins_differences, maxs_differences])
+
     area_source = np.mean(max_source- min_source)
     area_target = np.mean(max_target- min_target)
 
-    met = np.power(mean_differences, 2) + Metric.noise_senssitivity*np.power(area_target- area_source, 2)
+    met = mean_differences + Metric.noise_senssitivity*np.power(area_target- area_source, 2)
 
     return met
