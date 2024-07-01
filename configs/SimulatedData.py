@@ -10,7 +10,7 @@ class Proposed:
     sequence_lenght_in_sample = 64
     granularity = 1
     overlap= 0.25
-    epochs = 20
+    epochs = 50
 
 
     n_feature = len(cols_on_interrest)
@@ -20,6 +20,9 @@ class Proposed:
     train_split = 0.7
     test_split  = 0.3
     valid_split = 0.2 
+
+    reduce_train_set = False
+    valid_set_batch_size= 50
 
     met_params = MetricSimulatedData()
         

@@ -1,5 +1,5 @@
 class Metric():
-    mean_senssibility_factor = 10
+    mean_senssibility_factor = 0
     noise_senssitivity = 0.5 
 
 

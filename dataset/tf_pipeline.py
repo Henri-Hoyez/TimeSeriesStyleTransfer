@@ -23,11 +23,12 @@ def make_train_valid_dset(
         df:pd.DataFrame, sequence_lenght_in_sample:int, 
         granularity:int, 
         shift_between_sequences:int, 
-        batch_size:int, 
+        train_batch_size:int,
+        valid_batch_size:int, 
         shuffle=True,
-        valid_set_size:int=500,
+        valid_set_size:int=5000,
         reduce_train_set:bool=False,
-        cache:bool=True) -> tf.data.Dataset:
+        reduction_coeficient:int=500) -> tf.data.Dataset:
     
     sequence_lenght = int(sequence_lenght_in_sample*granularity)
 
@@ -39,17 +40,13 @@ def make_train_valid_dset(
 
     if reduce_train_set == True:
         print("[+] Reducing Train set size...")
-        train_dset = train_dset.take(150*batch_size)
+        train_dset = train_dset.take(reduction_coeficient* train_batch_size)
 
     if shuffle:
         train_dset= train_dset.shuffle(20000)
 
-    if batch_size > 0:
-        train_dset = train_dset.batch(batch_size, drop_remainder=True)
-        valid_dset = valid_dset.batch(batch_size, drop_remainder=True)
-    
-    # if cache == True:
-    #     train_dset = train_dset.cache().prefetch(10)
-    #     valid_dset = valid_dset.cache().prefetch(10)
+    if train_batch_size > 0:
+        train_dset = train_dset.batch(train_batch_size, drop_remainder=True)
+        valid_dset = valid_dset.batch(valid_batch_size, drop_remainder=True)
 
     return train_dset, valid_dset
