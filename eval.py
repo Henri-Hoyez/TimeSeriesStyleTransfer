@@ -1,3 +1,4 @@
+import pandas as pd
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ["TF_USE_LEGACY_KERAS"]="1"
@@ -6,11 +7,7 @@ import argparse
 
 from configs.mts_style_transfer_v1.args import AmplitudeShiftArgs as args
 from models.Layers.AdaIN import AdaIN
-from utils import eval_methods, dataLoader
-from configs.mts_style_transfer_v1.args import AmplitudeShiftArgs as args
-
-
-
+from utils import dataLoader, simple_metric
 
 
 def parse_arguments():
@@ -61,11 +58,20 @@ def load_models(shell_arguments:dict):
 
     return content_encoder, style_encoder, decoder
 
+def generate(
+        content_batch, 
+        style_batch, 
+        content_encoder, 
+        style_encoder, 
+        decoder):
+    content = content_encoder(content_batch, training=False)
+    style = style_encoder(style_batch, training=False)
+    generated = decoder([content, style], training=False)
+    return generated
 
-def load_valid_datasets(shell_arguments:dict):
+
+def load_valid_batches(shell_arguments:dict):
     default_parameters = args()
-
-    default_parameters.simulated_arguments.epochs = shell_arguments.epochs
 
     sequence_length = default_parameters.simulated_arguments.sequence_lenght_in_sample
     gran = default_parameters.simulated_arguments.granularity
@@ -77,7 +83,7 @@ def load_valid_datasets(shell_arguments:dict):
         sequence_length, 
         gran, 
         overlap, 
-        2*bs)
+        bs)
     
     _, style1_dset_valid =  dataLoader.loading_wrapper(
         shell_arguments.style1_dataset, 
@@ -93,21 +99,60 @@ def load_valid_datasets(shell_arguments:dict):
         overlap,
         bs)
     
-    return content_dset_valid, style1_dset_valid, style2_dset_valid
+    content_batch = dataLoader.get_batches(content_dset_valid, 100)
+    style1_batch = dataLoader.get_batches(style1_dset_valid, 100) 
+    style2_batch = dataLoader.get_batches(style2_dset_valid, 100) 
+    
+    return content_batch, style1_batch, style2_batch
 
 
-def main():
+def evaluate():
+    print('hello !!!')
+    result_dictionary = dict()
+
     shell_arguments = parse_arguments()
 
-    dset_content_valid, dset_style1_valid, dset_style2_valid = load_valid_datasets(shell_arguments)
+    content_big_batch, style1_big_batch, style2_big_batch = load_valid_batches(shell_arguments)
+    
     content_encoder, style_encoder, decoder = load_models(shell_arguments)
 
+    
+    generated_style1 = generate(content_big_batch, style1_big_batch,
+                                content_encoder, style_encoder, decoder)
+    
+    generated_style2 = generate(content_big_batch, style2_big_batch,
+                                content_encoder, style_encoder, decoder)
 
+    _, content_extracted_noise = simple_metric.simple_metric_on_noise(content_big_batch)
+    _, style1_extracted_noise = simple_metric.simple_metric_on_noise(style1_big_batch)
+    _, style2_extracted_noise = simple_metric.simple_metric_on_noise(style2_big_batch)
 
+    _, gen_s1_extracted_noise = simple_metric.simple_metric_on_noise(generated_style1)
+    _, gen_s2_extracted_noise = simple_metric.simple_metric_on_noise(generated_style2)
+    
+    result_dictionary["content_extracted_noise"]= content_extracted_noise
+    result_dictionary["style1_extracted_noise"] = style1_extracted_noise
+    result_dictionary["style2_extracted_noise"] = style2_extracted_noise
+    result_dictionary["gen_s1_extracted_noise"] = gen_s1_extracted_noise
+    result_dictionary["gen_s2_extracted_noise"] = gen_s2_extracted_noise
 
+    content_extracted_ampl = simple_metric.extract_amplitude_from_signals(content_big_batch)
+    style1_extracted_ampl = simple_metric.extract_amplitude_from_signals(style1_big_batch)
+    style2_extracted_ampl = simple_metric.extract_amplitude_from_signals(style2_big_batch)
+    
+    gen_s1_extracted_ampl = simple_metric.extract_amplitude_from_signals(generated_style1)
+    gen_s2_extracted_ampl = simple_metric.extract_amplitude_from_signals(generated_style2)
 
+    result_dictionary['content_extracted_ampl'] = content_extracted_ampl
+    result_dictionary['style1_extracted_ampl'] = style1_extracted_ampl
+    result_dictionary['style2_extracted_ampl'] = style2_extracted_ampl
+    result_dictionary['gen_s1_extracted_ampl'] = gen_s1_extracted_ampl
+    result_dictionary['gen_s2_extracted_ampl'] = gen_s2_extracted_ampl
 
+    df = pd.DataFrame().from_dict(result_dictionary)
 
+    df.to_excel(f"{shell_arguments.exp_folder}/{shell_arguments.exp_name}.xlsx")
+    
 
 if __name__ == "__main__":
-    main()
+    evaluate()
