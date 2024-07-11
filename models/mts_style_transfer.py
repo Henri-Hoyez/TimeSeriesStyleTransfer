@@ -21,20 +21,33 @@ def generator_part(content_input, n_sample_wiener:int, feat_wiener:int, style_in
     _stage2_style_input = tf.keras.layers.Dense(32)(style_input)
     _stage2_style_input = tf.keras.layers.Reshape((32, 1))(_stage2_style_input)
 
-    x = AdaIN()(_content_input, _style_input)
 
-    x = tf.keras.layers.Conv1DTranspose(16, 5, 1, padding='same', kernel_initializer=init)(x)
+    x = tf.keras.layers.Conv1DTranspose(64, 5, 1, padding='same', kernel_initializer=init)(_content_input)
+    x = AdaIN()(x, _style_input)
     x = tf.keras.layers.LeakyReLU()(x)
 
-    x = tf.keras.layers.Conv1DTranspose(16, 5, 2, padding='same', kernel_initializer=init)(x)
+    x = tf.keras.layers.Conv1DTranspose(64, 5, 1, padding='same', kernel_initializer=init)(x)
+    x = AdaIN()(x, _style_input)
+    x = tf.keras.layers.LeakyReLU()(x)  
+
+    x = tf.keras.layers.Conv1DTranspose(64, 5, 2, padding='same', kernel_initializer=init)(x)
     x = tf.keras.layers.LeakyReLU()(x)
 
+
+    x = tf.keras.layers.Conv1DTranspose(32, 5, 1, padding='same', kernel_initializer=init)(x)
     x = AdaIN()(x, _stage2_style_input)
-    x = tf.keras.layers.Conv1DTranspose(62, 5, 1, padding='same', kernel_initializer=init)(x)
     x = tf.keras.layers.LeakyReLU()(x)
 
-    x = tf.keras.layers.Conv1DTranspose(1, 5, 2, padding='same', kernel_initializer=init)(x)
+    x = tf.keras.layers.Conv1DTranspose(32, 5, 1, padding='same', kernel_initializer=init)(x)
+    x = AdaIN()(x, _stage2_style_input)
     x = tf.keras.layers.LeakyReLU()(x)
+
+    x = tf.keras.layers.Conv1DTranspose(32, 5, 2, padding='same', kernel_initializer=init)(x)
+    x = tf.keras.layers.LeakyReLU()(x)
+
+    # output
+    x = tf.keras.layers.Conv1DTranspose(1, 5, 1, padding='same', kernel_initializer=init)(x)
+    # x = tf.keras.layers.LeakyReLU()(x)
 
     return x
 
@@ -69,8 +82,8 @@ def make_global_discriminator(seq_length:int, n_signals:int, n_classes:int):
     x = tf.keras.layers.LeakyReLU()(x)
 
     x = tf.keras.layers.Flatten()(x)
-
-    _output = tf.keras.layers.Dense(1, activation="sigmoid")(x)
+    crit_hidden_layer = tf.keras.layers.Dense(10)(x)
+    _output = tf.keras.layers.Dense(1, activation="sigmoid")(crit_hidden_layer)
     _class_output = tf.keras.layers.Dense(n_classes, activation="sigmoid")(x)
 
     model = tf.keras.Model(_input, [_output, _class_output], name="global_discriminator")
@@ -118,15 +131,15 @@ def make_content_encoder(seq_length:int, n_feat:int, feat_wiener:int):
 
     _input = tf.keras.Input((seq_length, n_feat))
 
-    x = tf.keras.layers.Conv1D(64, 5, 2, padding='same', kernel_initializer=init)(_input)
+    x = tf.keras.layers.Conv1D(32, 5, 2, padding='same', kernel_initializer=init)(_input)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
         
-    x = tf.keras.layers.Conv1D(128, 5, 1, padding='same', kernel_initializer=init)(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.LeakyReLU()(x)
+    # x = tf.keras.layers.Conv1D(64, 5, 1, padding='same', kernel_initializer=init)(x)
+    # x = tf.keras.layers.BatchNormalization()(x)
+    # x = tf.keras.layers.LeakyReLU()(x)
     
-    x = tf.keras.layers.Conv1D(128, 5, 2, padding='same', kernel_initializer=init)(x)
+    x = tf.keras.layers.Conv1D(64, 5, 2, padding='same', kernel_initializer=init)(x)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
     
@@ -144,25 +157,25 @@ def make_style_encoder(seq_length:int, n_feat:int, vector_output_shape:int):
 
     _input = tf.keras.Input((seq_length, n_feat))
 
-    x = tf.keras.layers.Conv1D(64, 5, 2, padding='same', kernel_initializer=init)(_input) 
+    x = tf.keras.layers.Conv1D(32, 5, 2, padding='same', kernel_initializer=init)(_input) 
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
 
-    x = tf.keras.layers.Conv1D(128, 5, 1, padding='same', kernel_initializer=init)(x)
+    # x = tf.keras.layers.Conv1D(64, 5, 1, padding='same', kernel_initializer=init)(x)
+    # x = tf.keras.layers.BatchNormalization()(x)
+    # x = tf.keras.layers.LeakyReLU()(x)
+
+    x = tf.keras.layers.Conv1D(64, 5, 2, padding='same', kernel_initializer=init)(x)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
 
-    x = tf.keras.layers.Conv1D(128, 5, 2, padding='same', kernel_initializer=init)(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.LeakyReLU()(x)
-
-    x = tf.keras.layers.Conv1D(256, 5, 1, padding='same', kernel_initializer=init)(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.LeakyReLU()(x)
+    # x = tf.keras.layers.Conv1D(256, 5, 1, padding='same', kernel_initializer=init)(x)
+    # x = tf.keras.layers.BatchNormalization()(x)
+    # x = tf.keras.layers.LeakyReLU()(x)
 
     x = tf.keras.layers.Flatten()(x)
-    x = tf.keras.layers.Dense(128, activation=None)(x)
-    x = tf.keras.layers.LeakyReLU()(x)
+    # x = tf.keras.layers.Dense(128, activation=None)(x)
+    # x = tf.keras.layers.LeakyReLU()(x)
     x = tf.keras.layers.Dense(vector_output_shape, activation="linear")(x)
 
     model = tf.keras.Model(_input, x)

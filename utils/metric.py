@@ -1,6 +1,14 @@
 import numpy as np
 from configs.Metric import Metric
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+os.environ["TF_USE_LEGACY_KERAS"]="1"
+import tensorflow as tf
+from configs.SimulatedData import Proposed
+configs = Proposed()
+
+
 def optimized_cov(a,v):
     _seq_len = a.shape[1]
     nan_mean_a = np.nanmean(a, axis=1).reshape((-1,1))
@@ -84,15 +92,17 @@ def signature_metric(source_sig:np.ndarray, target_sig:np.ndarray):
     max_target = averaged_target[:, 1]
     mean_target = averaged_target[:, 2]
 
-    mean_differences = np.mean(np.abs(mean_target- mean_source))
-    mins_differences = np.mean(np.abs(min_target- min_source))
-    maxs_differences = np.mean(np.abs(max_target- max_source))
+    mean_differences = np.sum(np.abs(mean_target- mean_source))
+    mins_differences = np.sum(np.abs(min_target- min_source))
+    maxs_differences = np.sum(np.abs(max_target- max_source))
 
-    mean_differences = np.mean([mean_differences, mins_differences, maxs_differences])
+    metric = (mean_differences + mins_differences +maxs_differences)/3
 
-    area_source = np.mean(max_source- min_source)
-    area_target = np.mean(max_target- min_target)
+    return metric
 
-    met = mean_differences + Metric.noise_senssitivity*np.power(area_target- area_source, 2)
 
-    return met
+def compute_metric(generated_style:tf.Tensor, true_style:tf.Tensor, config:object=configs):
+    true_signature = signature_on_batch(true_style, config.met_params.ins, config.met_params.outs, config.met_params.signature_length)
+    generated_signature= signature_on_batch(generated_style, config.met_params.ins, config.met_params.outs, config.met_params.signature_length)
+
+    return signature_metric(true_signature, generated_signature)
