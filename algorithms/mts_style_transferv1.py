@@ -1,9 +1,7 @@
 from models.mtsStyleTransferV1 import ContentEncoder, Decoder, GlobalDiscriminator, LocalDiscriminator, StyleEncoder
 from utils.dataLoader import get_batches
 from utils.tensorboard_log import TensorboardLog
-from utils import metric
-from utils import simple_metric
-from utils import visualization_helpers
+from utils import metric, simple_metric, visualization_helpers, MLFlow_utils
 
 from models import losses
 import numpy as np
@@ -30,12 +28,6 @@ class Trainer():
         self.discr_step = self.default_arguments.simulated_arguments.discrinator_step
         self.epochs = self.default_arguments.simulated_arguments.epochs
 
-        self.content_encoder = ContentEncoder.make_content_encoder(sequence_length, n_signals, feat_wiener)
-        self.style_encoder = StyleEncoder.make_style_encoder(sequence_length, n_signals, style_vector_size)
-        self.decoder = Decoder.make_generator(n_sample_wiener, feat_wiener, style_vector_size ,n_signals)
-        self.global_discriminator = GlobalDiscriminator.make_global_discriminator(sequence_length, n_signals, n_styles)
-        self.local_discriminator = LocalDiscriminator.create_local_discriminator(n_signals, sequence_length, n_styles)
-
         self.l_triplet = self.default_arguments.simulated_arguments.l_triplet
         self.l_disentanglement = self.default_arguments.simulated_arguments.l_disentanglement
         self.l_reconstr = self.default_arguments.simulated_arguments.l_reconstr
@@ -43,6 +35,13 @@ class Trainer():
         self.style_preservation = self.default_arguments.simulated_arguments.l_style_preservation
         self.l_local = self.default_arguments.simulated_arguments.l_local
         self.l_content = self.default_arguments.simulated_arguments.l_content
+
+        self.content_encoder = ContentEncoder.make_content_encoder(sequence_length, n_signals, feat_wiener)
+        self.style_encoder = StyleEncoder.make_style_encoder(sequence_length, n_signals, style_vector_size)
+        self.decoder = Decoder.make_generator(n_sample_wiener, feat_wiener, style_vector_size ,n_signals)
+        self.global_discriminator = GlobalDiscriminator.make_global_discriminator(sequence_length, n_signals, n_styles)
+        self.local_discriminator = LocalDiscriminator.create_local_discriminator(n_signals, sequence_length, n_styles)
+
 
 
     def generate(self, content_batch, style_batch):
@@ -169,10 +168,10 @@ class Trainer():
         return plot_buff
 
     def save(self):
-        root = f"{self.shell_arguments.save_to}/{self.shell_arguments.exp_name}"
+        root = f"{self.shell_arguments.save_to}/{self.shell_arguments.exp_folder}/{self.shell_arguments.exp_name}"
         if not os.path.exists(root):
             print(f"[!] Save Folder Missing... Create root save folder at {root}")
-            os.mkdir(root)
+            os.makedirs(root)
 
         print(f"[+] Saving to {root}")
         self.content_encoder.save(f"{root}/content_encoder.h5")
@@ -180,6 +179,15 @@ class Trainer():
         self.decoder.save(f"{root}/decoder.h5")
         self.global_discriminator.save(f"{root}/global_discriminator.h5")
         self.local_discriminator.save(f"{root}/local_discriminator.h5")
+        print("[+] Save Parameters...")
+
+        parameters = {
+            "dset_style_1":self.shell_arguments.style1_dataset, 
+            "dset_style_2":self.shell_arguments.style2_dataset, 
+            "dset_content":self.shell_arguments.content_dset
+        }
+
+        MLFlow_utils.save_configuration(f"{root}/model_config.json", parameters)
         print("[+] Saved !")
 
     def prepare(self):

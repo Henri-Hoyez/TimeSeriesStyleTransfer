@@ -36,3 +36,4 @@ def make_naive_discriminator(seq_shape:tuple, n_classes:int)-> tf.keras.models.M
     )
 
     return model
+

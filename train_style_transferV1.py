@@ -52,6 +52,12 @@ def parse_arguments():
     )
     
     parser.add_argument(
+        "--exp_folder", 
+        help='Helpfull for grouping experiment', 
+        default=default_args.experiment_folder
+    )
+
+    parser.add_argument(
         "--exp_name", 
         help='The name of the experiment ;D', 
         default=default_args.exp_name
@@ -81,9 +87,6 @@ def main():
     overlap = standard_arguments.simulated_arguments.overlap
     bs = standard_arguments.simulated_arguments.batch_size
     ###
-
-
-    print(shell_arguments)
     
     content_dset_train, content_dset_valid = dataLoader.loading_wrapper(
         shell_arguments.content_dset,
