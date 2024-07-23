@@ -30,7 +30,7 @@ class Proposed:
     n_sample_wiener = 16 #sequence_lenght_in_sample//4
     noise_dim = (n_sample_wiener, n_wiener)
     n_validation_sequences = 500
-    discrinator_step = 5
+    discrinator_step = 10
 
     ##### Generator loss parameters.
     l_reconstr = .1
