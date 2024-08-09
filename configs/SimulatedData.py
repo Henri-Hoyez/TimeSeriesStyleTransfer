@@ -30,21 +30,28 @@ class Proposed:
     n_sample_wiener = 16 #sequence_lenght_in_sample//4
     noise_dim = (n_sample_wiener, n_wiener)
     n_validation_sequences = 500
-    discrinator_step = 10
+    discrinator_step = 1
 
     ##### Generator loss parameters.
-    l_reconstr = .1
+    l_reconstr = .25
     l_local = .1
-    l_global = .1
-    l_style_preservation = .45
+    l_global = .50
+    l_style_preservation = .5
 
     ##### Content encoder loss
     l_content = .1
 
     ##### Style Encoder
     l_disentanglement = .5
-    triplet_r = .5
+    triplet_r = .0
     l_triplet = .5
+    style_encoder_adv= 0.1
+
+    # Train the generator or the discriminator based on the 
+    # Performance of the Discriminator (Here the accuracy.)
+    discriminator_success_threashold = 0.9
+    alpha = 0.01
+    normal_training_epochs = 10
 
     met_params = MetricSimulatedData()
         

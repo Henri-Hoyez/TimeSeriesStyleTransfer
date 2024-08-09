@@ -5,7 +5,7 @@ class AmplitudeShiftArgs():
     def __init__(self) -> None:
         self.content_dataset_path = "data/simulated_dataset/01 - Source Domain.h5"
         self.style1_dataset_path = "data/simulated_dataset/amplitude_shift/1.0_1.0.h5"
-        self.style2_dataset_path = "data/simulated_dataset/amplitude_shift/4.5_4.5.h5"
+        self.style2_dataset_path = "data/simulated_dataset/amplitude_shift/4.0_4.0.h5"
 
         self.tensorboard_root_folder = "logs"
         self.default_root_save_folder = "to_evaluate"

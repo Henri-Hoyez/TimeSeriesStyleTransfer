@@ -6,13 +6,19 @@ import tensorflow as tf
 
 def local_discriminator_part(_input, n_classes:int):
 
-    x = tf.keras.layers.Conv1D(16, 5, 2, padding='same')(_input)
-    x = tf.keras.layers.LeakyReLU()(x)
+    # x = tf.keras.layers.Conv1D(16, 5, 2, padding='same')(_input)
+    # x = tf.keras.layers.LeakyReLU()(x)
+    # x = tf.keras.layers.Dropout(0.2)(x)
 
-    x = tf.keras.layers.Flatten()(x)
-    stage1_dropouted = tf.keras.layers.Dropout(0.25)(x)
+    # x = tf.keras.layers.Conv1D(16, 5, 2, padding='same')(x)
+    # x = tf.keras.layers.LeakyReLU()(x)
+    # x = tf.keras.layers.Dropout(0.2)(x)
 
-    _output = tf.keras.layers.Dense(1, activation="sigmoid")(stage1_dropouted)
+
+    x = tf.keras.layers.Flatten()(_input)
+    x = tf.keras.layers.Dropout(0.2)(x)
+
+    _output = tf.keras.layers.Dense(1)(x)
     # _class_output = layers.Dense(n_classes, activation="sigmoid")(stage1_dropouted)
 
     return _output

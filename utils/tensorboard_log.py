@@ -56,13 +56,18 @@ class TensorboardLog():
             tf.summary.scalar("30 - Content Loss", self.met_content_encoder_train.result(), step=epoch)
 
             tf.summary.scalar("40 - Global Discriminator Loss", self.met_central_d_train.result(), step=epoch)
+            tf.summary.scalar("40 - Global Discriminator Acc", self.met_central_d_accs_train.result(), step=epoch)
+
             tf.summary.scalar("40 - Local Discriminator Loss", self.met_channel_d_train.result(), step=epoch)
+            tf.summary.scalar("40 - Local Discriminator Acc", self.met_channel_d_accs_train.result(), step=epoch)
 
             tf.summary.scalar("41 - Global Discriminator Style Loss (Real Data)", self.met_central_d_style_real_train.result(), step=epoch)
             tf.summary.scalar("41 - Global Discriminator Style Loss (Fake Data)", self.met_central_d_style_fake_train.result(), step=epoch)
 
             tf.summary.scalar("42 - Local Discriminator Style Loss (Real Data)", self.met_channel_d_style_real_train.result(), step=epoch)
             tf.summary.scalar("42 - Local Discriminator Style Loss (Fake Data)", self.met_channel_d_style_fake_train.result(), step=epoch)
+
+
 
             tf.summary.image("Training Generations", image, step=epoch)
 
@@ -94,13 +99,29 @@ class TensorboardLog():
             tf.summary.scalar("30 - Content Loss", self.met_content_encoder_valid.result(), step=epoch)
 
             tf.summary.scalar("40 - Global Discriminator Loss", self.met_central_d_valid.result(), step=epoch)
+            tf.summary.scalar("40 - Global Discriminator Acc", self.met_central_d_accs_valid.result(), step=epoch)
+
+
             tf.summary.scalar("40 - Local Discriminator Loss", self.met_channel_d_valid.result(), step=epoch)
+            tf.summary.scalar("40 - Local Discriminator Acc", self.met_channel_d_accs_valid.result(), step=epoch)
 
             tf.summary.scalar("41 - Global Discriminator Style Loss (Real Data)", self.met_central_d_style_real_valid.result(), step=epoch)
             tf.summary.scalar("41 - Global Discriminator Style Loss (Fake Data)", self.met_central_d_style_fake_valid.result(), step=epoch)
 
             tf.summary.scalar("42 - Local Discriminator Style Loss (Real Data)", self.met_channel_d_style_real_valid.result(), step=epoch)
             tf.summary.scalar("42 - Local Discriminator Style Loss (Fake Data)", self.met_channel_d_style_fake_valid.result(), step=epoch)
+
+
+
+
+
+    def log_train_value(self, key, value, step):
+        with self.train_summary_writer.as_default():
+            tf.summary.scalar(key, value, step=step)
+
+    def log_valid_value(self, key, value, step):
+        with self.valid_summary_writer.as_default():
+            tf.summary.scalar(key, value, step=step)
 
     def reset_metric_states(self):
         self.met_generator_train.reset_states()
@@ -125,6 +146,9 @@ class TensorboardLog():
         self.met_amplitude_sim_style1_train.reset_states()
         self.met_amplitude_sim_style2_train.reset_states()
 
+        self.met_central_d_accs_train.reset_states()
+        self.met_channel_d_accs_train.reset_states()
+
     def reset_valid_states(self):
         self.met_generator_valid.reset_states()
         self.met_generator_reconstruction_valid.reset_states()
@@ -146,6 +170,10 @@ class TensorboardLog():
         self.met_noise_sim_style2_valid.reset_states()
         self.met_amplitude_sim_style1_valid.reset_states()
         self.met_amplitude_sim_style2_valid.reset_states()
+
+        self.met_central_d_accs_valid.reset_states()
+        self.met_channel_d_accs_valid.reset_states()
+        
 
     def intanciate_loggers(self):
         self.met_generator_train = tf.keras.metrics.Mean(name="Total Generator Loss")
@@ -227,11 +255,20 @@ class TensorboardLog():
         self.met_amplitude_sim_style1_valid= tf.keras.metrics.Mean(name="Amplitude Similarity Style1.")
         self.met_amplitude_sim_style2_valid= tf.keras.metrics.Mean(name="Amplitude Similarity Style2.")
 
-    def print_train(self, epoch, total_epochs, i, total_batch):
-        print(f"\r e:{epoch}/{total_epochs}; {i}/{total_batch}. G_loss {self.met_generator_train.result():0.2f}; Triplet Loss {self.met_triplet_train.result():0.2f}; Disentanglement Loss: {self.met_disentanglement_train.result():0.2f}; Content Loss {self.met_content_encoder_train.result():0.2f} Local D [Crit; Style]: [{self.met_channel_d_train.result():0.2f}; {self.met_channel_d_style_real_train.result():0.2f}]; Global D [Crit; Style]: [{self.met_central_d_train.result():0.2f}; {self.met_central_d_style_fake_train.result():0.2f}]       ", end="")
+        self.met_channel_d_accs_train = tf.keras.metrics.Mean(name="Channel Discriminator Accuracy.")
+        self.met_central_d_accs_train = tf.keras.metrics.Mean(name="Channel Discriminator Accuracy.")
 
-    def print_valid(self, e, epochs, vb, total_batch):
-        print(f"\r e:{e}/{epochs}; {vb}/{total_batch}. G_loss {self.met_generator_valid.result():0.2f}; Triplet Loss {self.met_triplet_valid.result():0.2f}; Disentanglement Loss: {self.met_disentanglement_valid.result():0.2f}; Content Loss {self.met_content_encoder_valid.result():0.2f} Local D [Crit; Style]: [{self.met_channel_d_valid.result():0.2f}; {self.met_channel_d_style_real_valid.result():0.2f}]; Global D [Crit; Style]: [{self.met_central_d_valid.result():0.2f}; {self.met_central_d_style_fake_valid.result():0.2f}]       ", end="")
+        self.met_channel_d_accs_valid = tf.keras.metrics.Mean(name="Channel Discriminator Accuracy.")
+        self.met_central_d_accs_valid = tf.keras.metrics.Mean(name="Channel Discriminator Accuracy.")
+
+
+    def print_train(self, epoch, total_epochs, i, total_batch, extra_info:str=""):
+        # print(f"\r e:{epoch}/{total_epochs}; {i}/{total_batch}. G_loss {self.met_generator_train.result():0.2f}; Triplet Loss {self.met_triplet_train.result():0.2f}; Disentanglement Loss: {self.met_disentanglement_train.result():0.2f}; Content Loss {self.met_content_encoder_train.result():0.2f} Local D [Crit; Style]: [{self.met_channel_d_train.result():0.2f}; {self.met_channel_d_style_real_train.result():0.2f}]; Global D [Crit; Style]: [{self.met_central_d_train.result():0.2f}; {self.met_central_d_style_fake_train.result():0.2f}] {extra_info}       ", end="")
+        print(f"\r e:{epoch}/{total_epochs}; {i}/{total_batch}. G_loss {self.met_generator_train.result():0.2f}; Local D [Crit; Style]: [{self.met_channel_d_train.result():0.2f}; {self.met_channel_d_style_real_train.result():0.2f}]; Global D [Crit; Style]: [{self.met_central_d_train.result():0.2f}; {self.met_central_d_style_fake_train.result():0.2f}] {extra_info}       ", end="")
+
+    def print_valid(self, e, epochs, vb, total_batch, extra_info:str=""):
+        # print(f"\r e:{e}/{epochs}; {vb}/{total_batch}. G_loss {self.met_generator_valid.result():0.2f}; Triplet Loss {self.met_triplet_valid.result():0.2f}; Disentanglement Loss: {self.met_disentanglement_valid.result():0.2f}; Content Loss {self.met_content_encoder_valid.result():0.2f} Local D [Crit; Style]: [{self.met_channel_d_valid.result():0.2f}; {self.met_channel_d_style_real_valid.result():0.2f}]; Global D [Crit; Style]: [{self.met_central_d_valid.result():0.2f}; {self.met_central_d_style_fake_valid.result():0.2f}] {extra_info}      ", end="")
+        print(f"\r e:{e}/{epochs}; {vb}/{total_batch}. G_loss {self.met_generator_valid.result():0.2f}; Local D [Crit; Style]: [{self.met_channel_d_valid.result():0.2f}; {self.met_channel_d_style_real_valid.result():0.2f}]; Global D [Crit; Style]: [{self.met_central_d_valid.result():0.2f}; {self.met_central_d_style_fake_valid.result():0.2f}] {extra_info}      ", end="")
 
     def fig_to_buff(self, fig):
         buf = io.BytesIO()

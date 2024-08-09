@@ -3,7 +3,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
 
-cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=False)
+cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 error_classif = tf.keras.losses.SparseCategoricalCrossentropy()
 
 def recontruction_loss(true:tf.Tensor, generated:tf.Tensor):
@@ -43,9 +43,9 @@ def local_discriminator_loss(crits_on_real, crits_on_fake):
     individual_losses = []
 
     for i in range(crits_on_real.shape[0]):
-        l1 = bc(tf.zeros_like(crits_on_real), crits_on_fake[i])
+        l1 = bc(tf.zeros_like(crits_on_fake), crits_on_fake[i])
         l2 = bc(tf.ones_like(crits_on_real), crits_on_real[i])
-        loss = (l1+ l2)/2
+        loss = l1+ l2
         individual_losses.append(loss)
         
     return individual_losses
@@ -116,3 +116,5 @@ def fixed_point_disentanglement(
     loss = tf.math.maximum(loss, zeros)
     loss = tf.reduce_mean(loss)
     return loss
+
+

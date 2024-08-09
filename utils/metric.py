@@ -106,3 +106,18 @@ def compute_metric(generated_style:tf.Tensor, true_style:tf.Tensor, config:objec
     generated_signature= signature_on_batch(generated_style, config.met_params.ins, config.met_params.outs, config.met_params.signature_length)
 
     return signature_metric(true_signature, generated_signature)
+
+
+def step_fonction(xs, treashold=0.5):
+    return tf.cast(tf.math.greater_equal(xs, treashold), tf.float32)
+
+
+def accuracy(y_true, y_pred):
+    y_pred = step_fonction(y_pred)
+
+    y_pred = tf.reshape(y_pred, (-1,))
+    y_true = tf.reshape(y_true, (-1,))
+    
+    good_prediction = tf.reduce_sum(tf.cast(y_pred == y_true, tf.float32))
+
+    return good_prediction/y_true.shape[0]
