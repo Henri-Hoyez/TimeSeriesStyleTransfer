@@ -9,7 +9,7 @@ error_classif = tf.keras.losses.SparseCategoricalCrossentropy()
 def recontruction_loss(true:tf.Tensor, generated:tf.Tensor):
     diff = generated- true
     result = tf.math.reduce_mean(tf.square(diff))
-    return result
+    return tf.convert_to_tensor([result])
 
 def discriminator_loss(real_output, fake_output):
     real_loss = cross_entropy(tf.ones_like(real_output), real_output)
@@ -18,7 +18,7 @@ def discriminator_loss(real_output, fake_output):
     return total_loss
 
 def generator_loss(fake_output):
-    return cross_entropy(tf.ones_like(fake_output), fake_output)
+    return tf.convert_to_tensor([cross_entropy(tf.ones_like(fake_output), fake_output)])
 
 
 def fixed_point_content(encoded_content_real, encoded_content_fake):
@@ -26,29 +26,38 @@ def fixed_point_content(encoded_content_real, encoded_content_fake):
     return tf.reduce_mean(tf.square(diff))
 
 def style_classsification_loss(y_pred, y_true):
-    return error_classif(y_true, y_pred)
+    return tf.convert_to_tensor([error_classif(y_true, y_pred)])
 
-def local_generator_loss(crit_on_fake):
-    bc = tf.keras.losses.BinaryCrossentropy()
+def local_generator_loss(crit_on_fakes:list):
     individual_losses = []
-    true_label = tf.zeros(crit_on_fake[0].shape)
 
-    for i in range(crit_on_fake.shape[0]):
-        individual_losses.append(bc(true_label, crit_on_fake[i]))
+    for crit_on_fake in crit_on_fakes:
+        individual_losses.append(cross_entropy(tf.ones_like(crit_on_fake), crit_on_fake))
         
-    return tf.reduce_mean(individual_losses)
+    return tf.convert_to_tensor(individual_losses)
 
 def local_discriminator_loss(crits_on_real, crits_on_fake):
-    bc = tf.keras.losses.BinaryCrossentropy()
     individual_losses = []
 
-    for i in range(crits_on_real.shape[0]):
-        l1 = bc(tf.zeros_like(crits_on_fake), crits_on_fake[i])
-        l2 = bc(tf.ones_like(crits_on_real), crits_on_real[i])
+    for local_real, local_fake in zip(crits_on_real, crits_on_fake):
+        l1 = cross_entropy(tf.ones_like(local_real), local_real)
+        l2 = cross_entropy(tf.zeros_like(local_fake), local_fake)
         loss = l1+ l2
         individual_losses.append(loss)
         
     return individual_losses
+
+
+def local_discriminator_accuracy(y_true, y_preds):
+    # Y_true [BS, 1]
+    #y_preds: [n_signals, BS, 1]
+
+    accs = []
+    for y_pred in y_preds:
+        accs.append(tf.keras.metrics.binary_accuracy(y_true, y_pred))
+
+    return tf.reduce_mean(accs)
+
 
 
 def l2(x:tf.Tensor, y:tf.Tensor):

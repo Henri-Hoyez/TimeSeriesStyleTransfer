@@ -9,6 +9,9 @@ from utils import simple_metric, eval_methods
 
 from models.evaluation.utils import *
 
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+
 from utils.gpu_memory_grow import gpu_memory_grow
 
 gpus = tf.config.list_physical_devices('GPU')
@@ -17,6 +20,116 @@ gpu_memory_grow(gpus)
 
 def time_shift_evaluation(big_batch):
     return [simple_metric.estimate_time_shift(big_batch, 0, i) for i in range(big_batch.shape[-1])]
+
+
+def viz_without_signatures(
+        content_encoder, style_encoder, decoder, 
+        content_sequences, 
+        style1_sequences, 
+        style2_sequences, root,
+        title_extanssion=""):
+    
+    save_to = f"{root}/Sequences.png"
+
+    # Make Generated sequence for visualization.
+    content_of_content = content_encoder(content_sequences, training=False)
+    style_of_style1= style_encoder(style1_sequences, training=False)
+    style1_generated = decoder([content_of_content, style_of_style1], training=False)
+    style1_generated = tf.concat(style1_generated, -1)
+
+    style_of_style2 = style_encoder(style2_sequences, training=False)
+    style2_generated = decoder([content_of_content, style_of_style2], training=False)
+    style2_generated = tf.concat(style2_generated, -1)
+
+    c_style1_generated = content_encoder(style1_generated, training=False)
+    s_style1_generated = style_encoder(style1_generated, training=False)
+
+    c_style2_generated = content_encoder(style2_generated, training=False)
+    s_style2_generated = style_encoder(style2_generated, training=False)
+
+
+    # Reduce the Style Vector for visualization purposes.
+    pca = PCA(2)
+    style_vectors = np.vstack(
+        [   style_of_style1, 
+            style_of_style2, 
+            s_style1_generated, 
+            s_style2_generated
+        ])
+
+    pca.fit(style_vectors)
+
+    reduced_style1 = pca.transform(style_of_style1)
+    reduced_style2 = pca.transform(style_of_style2)
+    reduced_style1_generated = pca.transform(s_style1_generated)
+    reduced_style2_generated = pca.transform(s_style2_generated)
+
+
+    all_values = np.array([content_sequences, style1_sequences, style2_sequences])
+    _min, _max = np.min(all_values)-1, np.max(all_values)+ 1
+
+    fig= plt.figure(figsize=(18, 10))
+    fig.suptitle(f"Sequence Generations. {title_extanssion}")
+    spec= fig.add_gridspec(3, 6)
+
+
+    ax00 = fig.add_subplot(spec[:2, :2])
+    ax00.set_title('Content Sequence. ($C_0$)')
+    ax00.plot(content_sequences[0])
+    ax00.set_ylim(_min, _max)
+    ax00.grid(True)
+    ax00.legend()
+
+# #######
+    ax01 = fig.add_subplot(spec[0, 2:4])
+    ax01.set_title('Style Sequence 1. ($S_0$)')
+    ax01.plot(style1_sequences[0])
+    ax01.set_ylim(_min, _max)
+    ax01.grid(True)
+
+    ax11 =  fig.add_subplot(spec[1, 2:4])
+    ax11.set_title("Style Sequence 2. ($S_1$)")
+    ax11.plot(style2_sequences[0])
+    ax11.set_ylim(_min, _max)
+    ax11.grid(True)
+
+# #######
+    ax02 = fig.add_subplot(spec[0, 4:])
+    ax02.set_title('Generated Sequence. ($C_0; S_0$)')
+    ax02.plot(style1_generated[0])
+    ax02.set_ylim(_min, _max)
+    ax02.grid(True) 
+
+    ax12 = fig.add_subplot(spec[1, 4:])
+    ax12.set_title('Generated Sequence. ($C_0; S_1$)')
+    ax12.plot(style2_generated[1])
+    ax12.set_ylim(_min, _max)
+    ax12.grid(True) 
+
+
+# #####
+    ax10 = fig.add_subplot(spec[2, 0:3])
+    ax10.set_title('Content Space.')
+    ax10.scatter(content_of_content[0, :, 0], content_of_content[0, :, 1],  label='Content of content.')
+    ax10.scatter(c_style1_generated[0, :, 0], c_style1_generated[0, :, 1], label='Content of Generated style 1')
+    ax10.scatter(c_style2_generated[0, :, 0], c_style2_generated[0, :, 1],  label='Content of Generated style 2')
+    ax10.grid(True)
+    ax10.legend()
+
+    ax11 = fig.add_subplot(spec[2, 3:])
+    ax11.set_title('Style Space, Reduced with PCA.')
+    ax11.scatter(reduced_style1[:, 0], reduced_style1[:, 1], label='Style 1.', alpha=0.25)
+    ax11.scatter(reduced_style2[:, 0], reduced_style2[:, 1], label='Style 2.', alpha=0.25)
+    ax11.scatter(reduced_style1_generated[:, 0], reduced_style1_generated[:, 1], label='Generations style 1.', alpha=0.25)
+    ax11.scatter(reduced_style2_generated[:, 0], reduced_style2_generated[:, 1], label='Generations style 2.', alpha=0.25)
+
+    ax11.grid(True)
+    ax11.legend()
+
+    plt.tight_layout()
+    fig.savefig(save_to)
+
+
 
 
 def evaluate():
@@ -64,6 +177,12 @@ def evaluate():
     print("[+] t-SNE Visualization.")
     eval_methods.tsne_plot(style1_big_batch[:500], style2_big_batch[:500], generated_style1[:500], generated_style2[:500], root, shell_arguments.exp_name)
 
+
+    print('[+] Plot Sequences.')
+    viz_without_signatures(content_encoder, style_encoder, decoder, content_big_batch[:500], style1_big_batch[:500], style2_big_batch[:500], root, shell_arguments.exp_name)
+
+    # plot_content_space(content_encoder, content_big_batch, style1_big_batch, style2_big_batch)
+
     print('[+] Simple Noise Metric.')
     _, content_extracted_noise = simple_metric.simple_metric_on_noise(content_big_batch)
 
@@ -75,10 +194,12 @@ def evaluate():
 
     print('[+] Simple Amplitude Metric.')
     content_extracted_ampl = simple_metric.extract_amplitude_from_signals(content_big_batch)
+
     style1_extracted_ampl = simple_metric.extract_amplitude_from_signals(style1_big_batch)
+    gen_s1_extracted_ampl = simple_metric.extract_amplitude_from_signals(generated_style1)
+
     style2_extracted_ampl = simple_metric.extract_amplitude_from_signals(style2_big_batch)
     
-    gen_s1_extracted_ampl = simple_metric.extract_amplitude_from_signals(generated_style1)
     gen_s2_extracted_ampl = simple_metric.extract_amplitude_from_signals(generated_style2)
 
     print("[+] Time shift Simple Metric.")

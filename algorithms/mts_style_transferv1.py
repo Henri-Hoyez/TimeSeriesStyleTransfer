@@ -53,11 +53,20 @@ class Trainer():
         self.global_discriminator = GlobalDiscriminator.make_global_discriminator(sequence_length, n_signals, n_styles)
         self.local_discriminator = LocalDiscriminator.create_local_discriminator(n_signals, sequence_length, n_styles)
 
+        tf.keras.utils.plot_model(self.decoder, show_shapes=True, to_file='Decoder.png')
+        tf.keras.utils.plot_model(self.global_discriminator, show_shapes=True, to_file='global_discriminator.png')
+        tf.keras.utils.plot_model(self.local_discriminator, show_shapes=True, to_file='local_discriminator.png')
+        tf.keras.utils.plot_model(self.content_encoder, show_shapes=True, to_file='content_encoder.png')
+        tf.keras.utils.plot_model(self.style_encoder, show_shapes=True, to_file='style_encoder.png')
+
+        # exit()
+
 
     def generate(self, content_batch, style_batch):
         content = self.content_encoder(content_batch, training=False)
         style = self.style_encoder(style_batch, training=False)
         generated = self.decoder([content, style], training=False)
+        generated = tf.concat(generated, -1)
         return generated
     
     def train(self):
@@ -67,7 +76,7 @@ class Trainer():
         discr_success = self.discr_success_th
         discr_success_valid = self.discr_success_th
         alpha = 0.01
-        central_channel_d_treadoff = 0.9
+        central_channel_d_treadoff = 0.5
 
         for e in range(self.default_arguments.simulated_arguments.epochs):
             self.logger.reset_metric_states()
@@ -94,11 +103,12 @@ class Trainer():
 
                     self.generator_step(content_sequence1, content_sequence2, style1_sequences, style2_sequences)
 
-                    discr_accs =  central_channel_d_treadoff* global_d_accs + (1- central_channel_d_treadoff)* local_d_accs
+                    # discr_accs =  central_channel_d_treadoff* global_d_accs + (1- central_channel_d_treadoff)* local_d_accs
+                    discr_accs =  np.max([global_d_accs, local_d_accs])
                     discr_success = discr_success * (1. - alpha) + alpha * (discr_accs)
                   
                     self.logger.print_train(e, self.epochs, i, total_batch_train, f"[{global_d_accs:0.2f}; {local_d_accs:0.2f}]: {discr_accs:0.4f} -> {discr_success:0.4f}")
-
+                    # break
                 else: 
                     # Then train one another given their performances.
                     train_d = bool(discr_success < self.discr_success_th)
@@ -112,11 +122,12 @@ class Trainer():
 
                     self.generator_step(content_sequence1, content_sequence2, style1_sequences, style2_sequences, not train_d or i == 0) # , backward=
                     
-                    discr_accs =  central_channel_d_treadoff* global_d_accs + (1- central_channel_d_treadoff)* local_d_accs
+                    # discr_accs =  central_channel_d_treadoff* global_d_accs + (1- central_channel_d_treadoff)* local_d_accs
+                    discr_accs =  np.max([global_d_accs, local_d_accs])
                     discr_success = discr_success * (1. - alpha) + alpha * (discr_accs)
 
                     self.logger.print_train(e, self.epochs, i, total_batch_train, f"[{global_d_accs:0.2f}; {local_d_accs:0.2f}]: {discr_accs:0.4f} -> {discr_success:0.4f} {test}")
-
+                    # break
             
             print()
             print("[+] Validation Step...")
@@ -126,13 +137,17 @@ class Trainer():
 
                 global_d_accs, local_d_accs = self.discriminator_valid(content_sequence1, style1_sequences, style2_sequences)
 
-                discr_accs =  central_channel_d_treadoff* global_d_accs + (1- central_channel_d_treadoff)* local_d_accs
+                # discr_accs =  central_channel_d_treadoff* global_d_accs + (1- central_channel_d_treadoff)* local_d_accs
+                discr_accs =  np.max([global_d_accs, local_d_accs])
+
                 discr_success_valid = discr_success_valid * (1. - alpha) + alpha * (discr_accs)
                   
 
                 self.generator_valid(content_sequence1, content_sequence2, style1_sequences, style2_sequences)
 
                 self.logger.print_valid(e, self.epochs, vb, total_batch_valid, f"[{global_d_accs:0.2f}; {local_d_accs:0.2f}]: {discr_accs:0.4f} -> {discr_success_valid:0.4f}")
+                # break
+
 
             self.training_evaluation(e)
             self.logger.log_train_value("40 - Discriminator Sucess", discr_success, e)            
@@ -265,11 +280,11 @@ class Trainer():
         self.local_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
         self.global_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
 
-        # self.opt_content_encoder = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.) # 
-        # self.opt_style_encoder = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.) # 
-        # self.opt_decoder = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.) # 
-        # self.local_discriminator_opt = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.) # 
-        # self.global_discriminator_opt = tf.keras.optimizers.Adam(learning_rate=0.0001, beta_1=0.) # 
+        # self.opt_content_encoder = tf.keras.optimizers.Adam(learning_rate=0.0005) # , beta_1=0. 
+        # self.opt_style_encoder = tf.keras.optimizers.Adam(learning_rate=0.0005) # , beta_1=0. 
+        # self.opt_decoder = tf.keras.optimizers.Adam(learning_rate=0.0005) # , beta_1=0. 
+        # self.local_discriminator_opt = tf.keras.optimizers.Adam(learning_rate=0.0005) # , beta_1=0. 
+        # self.global_discriminator_opt = tf.keras.optimizers.Adam(learning_rate=0.0005) # , beta_1=0. 
 
     def instanciate_datasets(self, 
                              content_dset_train:tf.data.Dataset, 
@@ -304,17 +319,21 @@ class Trainer():
             style1_generated= self.decoder([c1, s1], training=False)
             style2_generated= self.decoder([c1, s2], training=False)
 
+            # split sequences for discriminator's inputs
+            style1_sequences_splitted = tf.split(style1_sequences, style1_sequences.shape[-1], axis=-1)
+            style2_sequences_splitted = tf.split(style2_sequences, style2_sequences.shape[-1], axis=-1)
+
             # Global on Real
-            g_crit_real1, g_style_classif_real1 = self.global_discriminator(style1_sequences, training=True)
-            g_crit_real2, g_style_classif_real2 = self.global_discriminator(style2_sequences, training=True)
+            g_crit_real1, g_style_classif_real1 = self.global_discriminator(style1_sequences_splitted, training=True)
+            g_crit_real2, g_style_classif_real2 = self.global_discriminator(style2_sequences_splitted, training=True)
+
+            # Local on Real
+            l_crit1_real = self.local_discriminator(style1_sequences_splitted, training=True)
+            l_crit2_real = self.local_discriminator(style2_sequences_splitted, training=True)
 
             # Global on Generated
             g_crit_fake1, _ = self.global_discriminator(style1_generated, training=True)
             g_crit_fake2, _ = self.global_discriminator(style2_generated, training=True)
-
-            # Local on Real
-            l_crit1_real = self.local_discriminator(style1_sequences, training=True)
-            l_crit2_real = self.local_discriminator(style2_sequences, training=True)
 
             # Local on fake
             l_crit_fake1 = self.local_discriminator(style1_generated, training=True)
@@ -366,10 +385,10 @@ class Trainer():
         ])
 
         channel_accs = tf.reduce_mean([
-            tf.keras.metrics.binary_accuracy(real_labels, tf.reshape(tf.reduce_mean(l_crit1_real, 1), (self.batch_size, 1))),
-            tf.keras.metrics.binary_accuracy(real_labels, tf.reshape(tf.reduce_mean(l_crit2_real, 1), (self.batch_size, 1))),
-            tf.keras.metrics.binary_accuracy(generation_labels, tf.reshape(tf.reduce_mean(l_crit_fake1, 1), (self.batch_size, 1))),
-            tf.keras.metrics.binary_accuracy(generation_labels, tf.reshape(tf.reduce_mean(l_crit_fake1, 1), (self.batch_size, 1)))
+            losses.local_discriminator_accuracy(real_labels, l_crit1_real),
+            losses.local_discriminator_accuracy(real_labels, l_crit2_real),
+            losses.local_discriminator_accuracy(generation_labels, l_crit_fake1),
+            losses.local_discriminator_accuracy(generation_labels, l_crit_fake2)
         ])
 
         self.logger.met_central_d_accs_train(global_accs)
@@ -389,6 +408,7 @@ class Trainer():
             cs = self.content_encoder(contents, training=True)
             s_cs = self.style_encoder(contents, training=True)
             id_generated = self.decoder([cs, s_cs], training=True)
+            id_generated = tf.concat(id_generated, -1)
 
             reconstr_loss = losses.recontruction_loss(contents, id_generated)
 
@@ -402,20 +422,24 @@ class Trainer():
 
             generations = self.decoder([encoded_content, encoded_styles], training=True)
 
-            s_generations = self.style_encoder(generations, training=True)
-            c_generations = self.content_encoder(generations, training=True)
+            merged_generations = tf.concat(generations, -1)
+
+            s_generations = self.style_encoder(merged_generations, training=True)
+            c_generations = self.content_encoder(merged_generations, training=True)
             
             style_labels = np.zeros((2* _bs,))
             style_labels[_bs:]= 1.
 
             # Discriminator pass for the adversarial loss for the generator.
-            c1_s1_generations = generations[:_bs]
-            c1_s2_generations = generations[2*_bs:3* _bs]
+            c1_s1_generations = merged_generations[:_bs]
+            c1_s2_generations = merged_generations[2*_bs:3* _bs]
 
             c1_generations = tf.concat([
                 c1_s1_generations,
                 c1_s2_generations
             ], 0)
+
+            c1_generations = tf.split(c1_generations, c1_generations.shape[-1], -1)
 
             crit_on_fake, style_classif_fakes = self.global_discriminator(c1_generations, training=False)
 
@@ -479,26 +503,6 @@ class Trainer():
             self.opt_style_encoder.apply_gradients(zip(style_grad, self.style_encoder.trainable_variables))
             self.opt_decoder.apply_gradients(zip(decoder_grad, self.decoder.trainable_variables))
 
-
-        # Calculate the performances of the Generator.
-        # Get some D Predictions on Real Data.
-
-        crit_on_real1, _ = self.global_discriminator(style1_sequences, training=False)
-        crit_on_real2, _ = self.global_discriminator(style2_sequences, training=False)
-        crit_on_fake1, _ = self.global_discriminator(generations[:_bs], training=False)
-        crit_on_fake2, _ = self.global_discriminator(generations[2*_bs:3*_bs], training=False)
-
-        real_labels = tf.ones_like(crit_on_real1)
-        generation_labels = tf.zeros_like(crit_on_fake1)# Here there is a combination of style so the shape is different.
-
-        accs = [
-            metric.accuracy(crit_on_real1, real_labels),
-            metric.accuracy(crit_on_real2, real_labels),
-            metric.accuracy(crit_on_fake1, generation_labels),
-            metric.accuracy(crit_on_fake2, generation_labels)
-            
-        ]
-
         self.logger.met_generator_train(g_loss)
         self.logger.met_generator_reconstruction_train(reconstr_loss)
 
@@ -512,14 +516,16 @@ class Trainer():
         self.logger.met_style_encoder_train(style_encoder_loss)
         self.logger.met_content_encoder_train(content_preservation)
 
-        return tf.reduce_mean(accs)
-
     @tf.function
     def generator_valid(self, content_sequence1, content_sequence2, style1_sequences, style2_sequences):
+        # Reconstruction Loss: Try to generate the same sequence given
+        # it's content and style.
         contents = tf.concat([content_sequence1, content_sequence2], 0)
         cs = self.content_encoder(contents, training=True)
         s_cs = self.style_encoder(contents, training=True)
         id_generated = self.decoder([cs, s_cs], training=True)
+        id_generated = tf.concat(id_generated, -1)
+
         reconstr_loss = losses.recontruction_loss(contents, id_generated)
 
         ####
@@ -532,18 +538,29 @@ class Trainer():
 
         generations = self.decoder([encoded_content, encoded_styles], training=True)
 
-        s_generations = self.style_encoder(generations, training=True)
-        c_generations = self.content_encoder(generations, training=True)
-        
-        style_labels = np.zeros((4* _bs,))
-        style_labels[2* _bs:]= 1.
+        merged_generations = tf.concat(generations, -1)
+
+        s_generations = self.style_encoder(merged_generations, training=True)
+        c_generations = self.content_encoder(merged_generations, training=True)
+            
+        style_labels = np.zeros((2* _bs,))
+        style_labels[_bs:]= 1.
 
         # Discriminator pass for the adversarial loss for the generator.
-        crit_on_fake, style_classif_fakes = self.global_discriminator(generations, training=False)
+        c1_s1_generations = merged_generations[:_bs]
+        c1_s2_generations = merged_generations[2*_bs:3* _bs]
+
+        c1_generations = tf.concat([
+            c1_s1_generations,
+            c1_s2_generations
+        ], 0)
+
+        c1_generations = tf.split(c1_generations, c1_generations.shape[-1], -1)
+
+        crit_on_fake, style_classif_fakes = self.global_discriminator(c1_generations, training=False)
 
         # Local Discriminator on Fake Data.
-        l_crit_on_fake = self.local_discriminator(generations, training=False)
-
+        l_crit_on_fake = self.local_discriminator(c1_generations, training=False)
 
         # Channel Discriminator losses
         local_realness_loss = losses.local_generator_loss(l_crit_on_fake)
@@ -584,9 +601,10 @@ class Trainer():
         content_preservation2 = losses.fixed_point_content(c2s, generated_c2s)
         content_preservation = (content_preservation1+ content_preservation2)/2
 
-        triplet_style =  losses.get_triplet_loss(s1s, s_c1_s1, s_c1_s2)
+        triplet_style =  losses.get_triplet_loss(s1s, s_c1_s1, s_c1_s2, self.default_arguments.simulated_arguments.triplet_r)
         content_style_disentenglement = losses.fixed_point_disentanglement(s_c2_s2, s_c1_s2, s2s)
 
+        content_encoder_loss = self.l_content* content_preservation
         style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement
 
         g_loss = self.l_reconstr* reconstr_loss+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss+ self.l_local* local_realness_loss
@@ -606,24 +624,6 @@ class Trainer():
         self.logger.met_disentanglement_valid(content_style_disentenglement)
 
 
-        # Calculate the accuracy of the discriminator.
-        # The lower, the stronger is the generator comparitively to the generator.
-        crit_on_real1, _ = self.global_discriminator(style1_sequences, training=False)
-        crit_on_real2, _ = self.global_discriminator(style2_sequences, training=False)
-        crit_on_fake1, _ = self.global_discriminator(generations[:_bs], training=False)
-        crit_on_fake2, _ = self.global_discriminator(generations[2*_bs:3*_bs], training=False)
-
-        real_labels = tf.ones_like(crit_on_real1)
-        generation_labels = tf.zeros_like(crit_on_fake1)# Here there is a combination of style so the shape is different.
-
-        accs = [metric.accuracy(crit_on_real1, real_labels),
-        metric.accuracy(crit_on_real2, real_labels),
-        metric.accuracy(crit_on_fake1, generation_labels),
-        metric.accuracy(crit_on_fake2, generation_labels)]
-
-        return tf.reduce_mean(accs)
-
-
 
     @tf.function
     def discriminator_valid(self, content_sequence1, style1_sequences, style2_sequences):
@@ -635,17 +635,22 @@ class Trainer():
         style1_generated= self.decoder([c1, s1], training=False)
         style2_generated= self.decoder([c1, s2], training=False)
 
+
+        # split sequences for discriminator's inputs
+        style1_sequences_splitted = tf.split(style1_sequences, style1_sequences.shape[-1], axis=-1)
+        style2_sequences_splitted = tf.split(style2_sequences, style2_sequences.shape[-1], axis=-1)
+
         # Global on Real
-        g_crit_real1, g_style_classif_real1 = self.global_discriminator(style1_sequences, training=True)
-        g_crit_real2, g_style_classif_real2 = self.global_discriminator(style2_sequences, training=True)
+        g_crit_real1, g_style_classif_real1 = self.global_discriminator(style1_sequences_splitted, training=True)
+        g_crit_real2, g_style_classif_real2 = self.global_discriminator(style2_sequences_splitted, training=True)
+
+        # Local on Real
+        l_crit1_real = self.local_discriminator(style1_sequences_splitted, training=True)
+        l_crit2_real = self.local_discriminator(style2_sequences_splitted, training=True)
 
         # Global on Generated
         g_crit_fake1, _ = self.global_discriminator(style1_generated, training=True)
         g_crit_fake2, _ = self.global_discriminator(style2_generated, training=True)
-
-        # Local on Real
-        l_crit1_real = self.local_discriminator(style1_sequences, training=True)
-        l_crit2_real = self.local_discriminator(style2_sequences, training=True)
 
         # Local on fake
         l_crit_fake1 = self.local_discriminator(style1_generated, training=True)
@@ -658,7 +663,7 @@ class Trainer():
         g_crit_loss = tf.stack((g_crit_loss1, g_crit_loss2))
         g_crit_loss = tf.reduce_mean(g_crit_loss, 0)
         
-        style_labels = tf.zeros((content_sequence1.shape[0], 1))
+        style_labels = tf.zeros((self.batch_size, 1))
         g_style1_real = losses.style_classsification_loss(g_style_classif_real1, style_labels+ 0.)
         g_style2_real = losses.style_classsification_loss(g_style_classif_real2, style_labels +1.)
         g_style_real = tf.stack((g_style1_real, g_style2_real))
@@ -689,10 +694,10 @@ class Trainer():
         ])
 
         channel_accs = tf.reduce_mean([
-            tf.keras.metrics.binary_accuracy(real_labels, tf.reshape(tf.reduce_mean(l_crit1_real, 1), (self.batch_size, 1))),
-            tf.keras.metrics.binary_accuracy(real_labels, tf.reshape(tf.reduce_mean(l_crit2_real, 1), (self.batch_size, 1))),
-            tf.keras.metrics.binary_accuracy(generation_labels, tf.reshape(tf.reduce_mean(l_crit_fake1, 1), (self.batch_size, 1))),
-            tf.keras.metrics.binary_accuracy(generation_labels, tf.reshape(tf.reduce_mean(l_crit_fake1, 1), (self.batch_size, 1)))
+            losses.local_discriminator_accuracy(real_labels, l_crit1_real),
+            losses.local_discriminator_accuracy(real_labels, l_crit2_real),
+            losses.local_discriminator_accuracy(generation_labels, l_crit_fake1),
+            losses.local_discriminator_accuracy(generation_labels, l_crit_fake2)
         ])
 
         self.logger.met_central_d_accs_valid(global_accs)

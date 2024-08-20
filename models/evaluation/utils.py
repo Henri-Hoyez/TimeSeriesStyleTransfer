@@ -52,21 +52,21 @@ def load_valid_batches(model_args:dict):
         sequence_length, 
         gran, 
         overlap, 
-        64)
+        bs)
     
     _, style1_dset_valid =  dataLoader.loading_wrapper(
         model_args["dset_style_1"], 
         sequence_length, 
         gran, 
         overlap,
-        64)
+        bs)
     
     _, style2_dset_valid =  dataLoader.loading_wrapper(
         model_args["dset_style_2"], 
         sequence_length, 
         gran, 
         overlap,
-        64)
+        bs)
     
     content_batch = dataLoader.get_batches(content_dset_valid, 500)
     style1_batch = dataLoader.get_batches(style1_dset_valid, 500) 
@@ -83,6 +83,7 @@ def generate(
     content = content_encoder(content_batch, training=False)
     style = style_encoder(style_batch, training=False)
     generated = decoder([content, style], training=False)
+    generated = tf.concat(generated, -1)
     return generated
 
 def encode_dataset(dset:tf.data.Dataset, content_extractor:tf.keras.Model, args:dict) -> tf.data.Dataset:
@@ -119,7 +120,7 @@ def translate_labeled_dataset(
 
     content_style = tf.data.Dataset.zip(content_space, style_space)
 
-    translated = content_style.map(lambda c,s: decoder([c,s], training=False))
+    translated = content_style.map(lambda c,s: tf.concat(decoder([c,s], training=False), -1))
     dset_final = tf.data.Dataset.zip(translated, labels)
 
     return dset_final
@@ -137,7 +138,7 @@ def translate_dataset(
 
     content_style = tf.data.Dataset.zip(content_space, style_space)
 
-    return content_style.map(lambda c,s: decoder([c,s], training=False))
+    return content_style.map(lambda c,s: tf.concat(decoder([c,s], training=False), -1))
     
 
 def predictions_on_content_space(content_encoder:tf.keras.Model, model_config:dict, data_loading_arguments:dict):
