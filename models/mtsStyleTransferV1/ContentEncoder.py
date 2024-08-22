@@ -12,13 +12,11 @@ def make_content_encoder(seq_length:int, n_feat:int, feat_wiener:int) -> tf.kera
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
         
-    # x = tf.keras.layers.Conv1D(64, 5, 1, padding='same', kernel_initializer=init)(x)
-    # x = tf.keras.layers.BatchNormalization()(x)
-    # x = tf.keras.layers.LeakyReLU()(x)
     
     x = tf.keras.layers.Conv1D(64, 5, 2, padding='same', kernel_initializer=init)(x)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
+
     
     x = tf.keras.layers.Conv1D(feat_wiener, 5, 1, padding='same', kernel_initializer=init, activation="linear")(x)
 

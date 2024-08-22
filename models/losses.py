@@ -23,7 +23,8 @@ def generator_loss(fake_output):
 
 def fixed_point_content(encoded_content_real, encoded_content_fake):
     diff = encoded_content_fake- encoded_content_real
-    return tf.reduce_mean(tf.square(diff))
+    # return tf.reduce_mean(tf.square(diff))
+    return tf.reduce_sum(tf.square(diff))
 
 def style_classsification_loss(y_pred, y_true):
     return tf.convert_to_tensor([error_classif(y_true, y_pred)])

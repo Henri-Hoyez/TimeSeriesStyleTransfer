@@ -36,20 +36,19 @@ class Proposed:
     l_reconstr = .25
     l_local = .1
     l_global = .50
-    l_style_preservation = .5
+    l_style_preservation = .7
 
     ##### Content encoder loss
     l_content = .1
 
     ##### Style Encoder
     l_disentanglement = 2
-    l_triplet = 15
-    triplet_r = .01
-    style_encoder_adv= 0.1
+    l_triplet = 2
+    triplet_r = 0.25
 
     # Train the generator or the discriminator based on the 
     # Performance of the Discriminator (Here the accuracy.)
-    discriminator_success_threashold = 0.90
+    discriminator_success_threashold = 0.80
     alpha = 0.01
     normal_training_epochs = 0
 

@@ -97,11 +97,11 @@ def extract_labels(dset, args) -> tf.data.Dataset:
 
     return dset.map(lambda seq: (seq[:, :, :-1], seq[:, idx, -1]))
 
-def load_dset(df_path:str, args:dict, drop_labels=False) -> tf.data.Dataset:
+def load_dset(df_path:str, args:dict, drop_labels=False, bs = 64) -> tf.data.Dataset:
     sequence_length = args.simulated_arguments.sequence_lenght_in_sample
     gran = args.simulated_arguments.granularity
     overlap = args.simulated_arguments.overlap
-    bs = 64
+    
 
     return dataLoader.loading_wrapper(df_path, sequence_length, gran, overlap, bs, drop_labels=drop_labels)
 

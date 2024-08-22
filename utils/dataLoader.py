@@ -47,7 +47,7 @@ def loading_wrapper(df_path:str, sequence_lenght:int, granularity:int, overlap:i
     _df_train, _df_valid = train_valid_split(_df)
 
     _dset_train = pd2tf(_df_train, sequence_lenght, granularity, overlap, batch_size, shuffle)
-    _dset_valid = pd2tf(_df_valid, sequence_lenght, granularity, overlap, batch_size, shuffle)
+    _dset_valid = pd2tf(_df_valid, sequence_lenght, granularity, overlap, batch_size, False)
 
     return _dset_train, _dset_valid
 

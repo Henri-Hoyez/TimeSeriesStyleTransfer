@@ -36,10 +36,9 @@ class Trainer():
         self.l_local = self.default_arguments.simulated_arguments.l_local
         self.l_content = self.default_arguments.simulated_arguments.l_content
 
-        self.style_encoder_adv = self.default_arguments.simulated_arguments.style_encoder_adv
+        # self.style_encoder_adv = self.default_arguments.simulated_arguments.style_encoder_adv
         self.discr_success_th = self.default_arguments.simulated_arguments.discriminator_success_threashold
         self.normal_training_epochs = self.default_arguments.simulated_arguments.normal_training_epochs
-
 
         self.global_discr_acc_train = tf.keras.metrics.BinaryAccuracy()
         self.global_discr_acc_valid = tf.keras.metrics.BinaryAccuracy()
@@ -76,7 +75,6 @@ class Trainer():
         discr_success = self.discr_success_th
         discr_success_valid = self.discr_success_th
         alpha = 0.01
-        central_channel_d_treadoff = 0.5
 
         for e in range(self.default_arguments.simulated_arguments.epochs):
             self.logger.reset_metric_states()
@@ -108,7 +106,6 @@ class Trainer():
                     discr_success = discr_success * (1. - alpha) + alpha * (discr_accs)
                   
                     self.logger.print_train(e, self.epochs, i, total_batch_train, f"[{global_d_accs:0.2f}; {local_d_accs:0.2f}]: {discr_accs:0.4f} -> {discr_success:0.4f}")
-                    # break
                 else: 
                     # Then train one another given their performances.
                     train_d = bool(discr_success < self.discr_success_th)
@@ -127,7 +124,6 @@ class Trainer():
                     discr_success = discr_success * (1. - alpha) + alpha * (discr_accs)
 
                     self.logger.print_train(e, self.epochs, i, total_batch_train, f"[{global_d_accs:0.2f}; {local_d_accs:0.2f}]: {discr_accs:0.4f} -> {discr_success:0.4f} {test}")
-                    # break
             
             print()
             print("[+] Validation Step...")
@@ -141,12 +137,11 @@ class Trainer():
                 discr_accs =  np.max([global_d_accs, local_d_accs])
 
                 discr_success_valid = discr_success_valid * (1. - alpha) + alpha * (discr_accs)
-                  
 
                 self.generator_valid(content_sequence1, content_sequence2, style1_sequences, style2_sequences)
 
                 self.logger.print_valid(e, self.epochs, vb, total_batch_valid, f"[{global_d_accs:0.2f}; {local_d_accs:0.2f}]: {discr_accs:0.4f} -> {discr_success_valid:0.4f}")
-                # break
+                
 
 
             self.training_evaluation(e)
@@ -476,6 +471,7 @@ class Trainer():
 
             s_c1_s1 = s_generations[:_bs]
             s_c1_s2 = s_generations[2*_bs: 3*_bs]
+            s_c2_s1 = s_generations[_bs: 2*_bs]
             s_c2_s2 = s_generations[3*_bs:] 
 
             s1s = encoded_styles[:_bs]
@@ -485,8 +481,13 @@ class Trainer():
             content_preservation2 = losses.fixed_point_content(c2s, generated_c2s)
             content_preservation = (content_preservation1+ content_preservation2)/2
 
-            triplet_style =  losses.get_triplet_loss(s1s, s_c1_s1, s_c1_s2, self.default_arguments.simulated_arguments.triplet_r)
-            content_style_disentenglement = losses.fixed_point_disentanglement(s_c2_s2, s_c1_s2, s2s)
+            triplet_style1 =  losses.get_triplet_loss(s1s, s_c1_s1, s_c1_s2, self.default_arguments.simulated_arguments.triplet_r)
+            triplet_style2 =  losses.get_triplet_loss(s2s, s_c1_s2, s_c1_s1, self.default_arguments.simulated_arguments.triplet_r)
+            triplet_style = (triplet_style1+ triplet_style2)/2
+
+            content_style_disentenglement1 = losses.fixed_point_disentanglement(s_c2_s2, s_c1_s2, s2s)
+            content_style_disentenglement2 = losses.fixed_point_disentanglement(s_c2_s1, s_c1_s1, s1s)
+            content_style_disentenglement = (content_style_disentenglement1 + content_style_disentenglement2)/2
 
             content_encoder_loss = self.l_content* content_preservation
             style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement
@@ -499,9 +500,10 @@ class Trainer():
         decoder_grad = decoder_tape.gradient(g_loss, self.decoder.trainable_variables)
             
         if backward == True:
-            self.opt_content_encoder.apply_gradients(zip(content_grad, self.content_encoder.trainable_variables))
-            self.opt_style_encoder.apply_gradients(zip(style_grad, self.style_encoder.trainable_variables))
             self.opt_decoder.apply_gradients(zip(decoder_grad, self.decoder.trainable_variables))
+
+        self.opt_content_encoder.apply_gradients(zip(content_grad, self.content_encoder.trainable_variables))
+        self.opt_style_encoder.apply_gradients(zip(style_grad, self.style_encoder.trainable_variables))
 
         self.logger.met_generator_train(g_loss)
         self.logger.met_generator_reconstruction_train(reconstr_loss)

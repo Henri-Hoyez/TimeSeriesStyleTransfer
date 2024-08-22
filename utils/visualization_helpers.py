@@ -4,6 +4,11 @@ from configs.SimulatedData import Proposed
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+os.environ["TF_USE_LEGACY_KERAS"]="1"
+import tensorflow as tf
+
 config = Proposed()
 def plot_generated_sequence(
         content_encoder, style_encoder, decoder, 
@@ -12,14 +17,37 @@ def plot_generated_sequence(
         style2_sequences,
         config = config, 
         show=False):
+    
+
+    # Generate a Specific sequence. 
+    # Style 1
+    style_index = 15
+    s1s = np.array([style1_sequences[style_index]])
+    s2s = np.array([style2_sequences[style_index]])
+    c = np.array([content_sequences[0]])
+
+    s1_style = style_encoder(s1s)
+    s2_style = style_encoder(s2s)
+    content_encoded = content_encoder(c)
+
+    s1_generated = decoder([content_encoded, s1_style])
+    s2_generated = decoder([content_encoded, s2_style])
+
+    # print(s1_generated.shape)
+    s1_generated = tf.concat(s1_generated, -1)
+    s2_generated = tf.concat(s2_generated, -1)
+
 
     # Make Generated sequence for visualization.
     content_of_content = content_encoder(content_sequences, training=False)
     style_of_style1= style_encoder(style1_sequences, training=False)
     style1_generated = decoder([content_of_content, style_of_style1], training=False)
+    style1_generated = tf.concat(style1_generated, -1)
 
     style_of_style2 = style_encoder(style2_sequences, training=False)
     style2_generated = decoder([content_of_content, style_of_style2], training=False)
+    style2_generated = tf.concat(style2_generated, -1)
+
 
     c_style1_generated = content_encoder(style1_generated, training=False)
     s_style1_generated = style_encoder(style1_generated, training=False)
@@ -72,26 +100,26 @@ def plot_generated_sequence(
 # #######
     ax01 = fig.add_subplot(spec[0, 2:4])
     ax01.set_title('Style Sequence 1. ($S_0$)')
-    ax01.plot(style1_sequences[0])
+    ax01.plot(style1_sequences[style_index])
     ax01.set_ylim(_min, _max)
     ax01.grid(True)
 
     ax11 = fig.add_subplot(spec[1, 2:4])
     ax11.set_title("Style Sequence 2. ($S_1$)")
-    ax11.plot(style2_sequences[0])
+    ax11.plot(style2_sequences[style_index])
     ax11.set_ylim(_min, _max)
     ax11.grid(True)
 
 # #######
     ax02 = fig.add_subplot(spec[0, 4:6])
     ax02.set_title('Generated Sequence. ($C_0; S_0$)')
-    ax02.plot(style1_generated[0])
+    ax02.plot(s1_generated[0])
     ax02.set_ylim(_min, _max)
     ax02.grid(True) 
 
     ax12 = fig.add_subplot(spec[1, 4:6])
     ax12.set_title('Generated Sequence. ($C_0; S_1$)')
-    ax12.plot(style2_generated[1])
+    ax12.plot(s2_generated[0])
     ax12.set_ylim(_min, _max)
     ax12.grid(True) 
 
