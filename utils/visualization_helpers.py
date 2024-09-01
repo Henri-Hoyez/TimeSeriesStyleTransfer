@@ -21,7 +21,7 @@ def plot_generated_sequence(
 
     # Generate a Specific sequence. 
     # Style 1
-    style_index = 15
+    style_index = 0
     s1s = np.array([style1_sequences[style_index]])
     s2s = np.array([style2_sequences[style_index]])
     c = np.array([content_sequences[0]])
@@ -187,3 +187,7 @@ def plot_generated_sequence(
     plt.tight_layout()
 
     return fig
+
+
+
+

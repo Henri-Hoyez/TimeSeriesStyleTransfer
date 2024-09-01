@@ -37,7 +37,8 @@ def pd2tf(df:pd.DataFrame, sequence_lenght, granularity, overlap, batch_size, sh
     if shuffle == True:
         dset = dset.shuffle(2000)
 
-    dset = dset.batch(batch_size, drop_remainder=True)
+    if batch_size > 0:
+        dset = dset.batch(batch_size, drop_remainder=True)
 
     return dset
 

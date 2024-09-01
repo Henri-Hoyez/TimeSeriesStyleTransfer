@@ -2,6 +2,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
+import numpy as np
 
 cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 error_classif = tf.keras.losses.SparseCategoricalCrossentropy()
@@ -91,6 +92,32 @@ def _pairwise_distance(a_embeddings, b_embeddings):
 
     return distances
 
+def select_index(pos_list:tf.Tensor):
+    pos_indexes = tf.where(pos_list == 1)
+    return tf.random.shuffle(tf.reshape(pos_indexes, (-1,)))[0]
+
+def select_positive_negative(labels:tf.Tensor, embeddings:tf.Tensor):
+    # Get a Square matrix, where there is ones when the class is the same.
+    positives = tf.equal(labels, tf.transpose(labels))
+    negatives = tf.logical_not(positives)
+
+    positives = tf.cast(positives, tf.float32)
+    negatives = tf.cast(negatives, tf.float32)
+    
+    positives = positives - tf.eye(labels.shape[0])
+
+    pos_embs, negs_embs = [], []
+    for i in range(positives.shape[0]):
+        pos, neg = positives[i], negatives[i]
+
+        pos_index = select_index(pos)
+        neg_index = select_index(neg)
+
+        pos_embs.append(embeddings[pos_index])
+        negs_embs.append(embeddings[neg_index])
+
+    return tf.convert_to_tensor(embeddings), tf.convert_to_tensor(pos_embs), tf.convert_to_tensor(negs_embs)
+
 
 def get_triplet_loss(anchor_embedding, positive_embedding, negative_embedding, triplet_r=0.5):
     positive_distance= _pairwise_distance(anchor_embedding, positive_embedding)
@@ -106,6 +133,37 @@ def get_triplet_loss(anchor_embedding, positive_embedding, negative_embedding, t
 
     positive_distances= l2(anchor_embedding, pos_embedding)
     negative_distances= l2(anchor_embedding, neg_embeddings)
+
+    loss = tf.reduce_mean(tf.maximum(triplet_r+ positive_distances - negative_distances, 0))
+
+    return loss
+
+def hard_triplet(labels:tf.Tensor, embeddings:tf.Tensor, triplet_r=0.5):
+
+    distances = _pairwise_distance(embeddings, embeddings)
+
+    # Get a Square matrix, where there is ones when the class is the same.
+    positives = tf.equal(labels, tf.transpose(labels))
+    negatives = tf.logical_not(positives)
+
+    positives = tf.cast(positives, tf.float32)
+    negatives = tf.cast(negatives, tf.float32)
+    
+    positives = positives - tf.eye(labels.shape[0])
+
+    positive_distances = distances* positives
+    negatives_distances = distances* negatives
+     
+    negatives_distances = tf.where(tf.equal(negatives_distances, 0.), np.inf, negatives_distances)
+
+    positive_index= tf.argmax(positive_distances, axis=1)
+    pos_embs = tf.gather(embeddings, positive_index)
+
+    negative_index = tf.argmin(negatives_distances, axis=1)
+    neg_embs =  tf.gather(embeddings, negative_index)
+
+    positive_distances= l2(embeddings, pos_embs)
+    negative_distances= l2(embeddings, neg_embs)
 
     loss = tf.reduce_mean(tf.maximum(triplet_r+ positive_distances - negative_distances, 0))
 
