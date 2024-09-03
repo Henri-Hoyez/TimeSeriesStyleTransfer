@@ -33,7 +33,7 @@ def draw_content_space(
     color='tab:blue',
     label='An amayzing label.'):
     
-    ax.scatter(content_wiener_process[:, 0], content_wiener_process[:, 1], label=label)
+    ax.scatter(content_wiener_process[:, 0], content_wiener_process[:, 1], label=label, color=color)
     draw_arrows(content_wiener_process[:, 0], content_wiener_process[:, 1], ax, color)
     
     
@@ -52,7 +52,7 @@ def plot_generated_sequence(
     # Generate viz for plots 
     style_index = 0
     n_style = seed_style_sequences.shape[0]
-    colors = ['tab:blue', 'tab:orange', 'tab:green']
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple']
 
     c = np.array([content_sequences[0]])
     c = content_encoder(c)
@@ -79,14 +79,23 @@ def plot_generated_sequence(
     generated_viz = decoder([content_encoded, reshaped_style_encoded[:, style_index, :]])
     
     generated_viz = tf.concat(generated_viz, -1)
+
+    all_values = np.array([
+        content_sequences[0], 
+        seed_style_sequences[0, style_index], 
+        seed_style_sequences[1, style_index]
+        ])
+    
+    _min, _max = np.min(all_values)-1, np.max(all_values)+ 1
     
     content_of_generated_viz = content_encoder(generated_viz)
+
+    content_of_style_sequences = content_encoder(seed_style_sequences[:, style_index, :])
     
-    
+
     # Make point for Style Scatter plot. 
     c1s = np.array([c[0]]* reshaped_style_sequences.shape[0])
     
-    print(c1s.shape, style_encoded.shape)
     
     gen_c1_s = decoder([c1s, style_encoded])
     gen_c1_s = tf.concat(gen_c1_s, -1)
@@ -94,7 +103,6 @@ def plot_generated_sequence(
     style_of_generated_viz = style_encoder(gen_c1_s)
     
     reduced_style_of_generated_viz = pca.transform(style_of_generated_viz)
-    print(gen_c1_s.shape, style_of_generated_viz.shape)
         
     reduced_style_of_generated_viz = tf.reshape(reduced_style_of_generated_viz, (
         seed_style_sequences.shape[0],
@@ -111,6 +119,7 @@ def plot_generated_sequence(
     ax00 = fig.add_subplot(spec[0:2, :2])
     ax00.set_title('Content Sequence. ($C_0$)')
     ax00.plot(content_sequences[0])
+    ax00.set_ylim(_min, _max)
     ax00.grid(True)
     ax00.legend()
 
@@ -118,22 +127,27 @@ def plot_generated_sequence(
     ax01 = fig.add_subplot(spec[0, 2:5])
     ax01.set_title('Style Sequence 1. ($S_0$)')
     ax01.plot(seed_style_sequences[0, style_index, :])
+    ax01.set_ylim(_min, _max)
+
     ax01.grid(True)
 
     ax11 = fig.add_subplot(spec[1, 2:5])
     ax11.set_title("Style Sequence 2. ($S_1$)")
     ax11.plot(seed_style_sequences[1, style_index, :])
+    ax11.set_ylim(_min, _max)
     ax11.grid(True)
 
 # #######
     ax02 = fig.add_subplot(spec[0, 5:])
     ax02.set_title('Generated Sequence. ($C_0; S_0$)')
     ax02.plot(generated_viz[0])
+    ax02.set_ylim(_min, _max)
     ax02.grid(True) 
 
     ax12 = fig.add_subplot(spec[1, 5:])
     ax12.set_title('Generated Sequence. ($C_0; S_1$)')
     ax12.plot(generated_viz[1])
+    ax12.set_ylim(_min, _max)
     ax12.grid(True) 
     
     
@@ -144,7 +158,9 @@ def plot_generated_sequence(
     ax11.set_title('Style Space, Reduced with PCA.')   
      
     for i in range(n_style):
-        draw_content_space(ax10, content_of_generated_viz[i], color=colors[i], label=f"content space style {i}")
+
+        draw_content_space(ax10, content_of_style_sequences[i], color=colors[2*i], label=f"content space Real style {i+1}")
+        draw_content_space(ax10, content_of_generated_viz[i], color=colors[2*i+1], label=f"content space Gen  style {i+1}")
         
         ax11.scatter(
             reduced_style[i, :, 0], 

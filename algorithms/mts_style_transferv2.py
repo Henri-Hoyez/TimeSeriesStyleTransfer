@@ -244,8 +244,8 @@ class Trainer():
         print("[+] Save Parameters...")
 
         parameters = {
-            "dset_style_1":self.shell_arguments.style1_dataset, 
-            "dset_style_2":self.shell_arguments.style2_dataset, 
+            "dset_style_1":self.shell_arguments.style_datasets[0], 
+            "dset_style_2":self.shell_arguments.style_datasets[1], 
             "dset_content":self.shell_arguments.content_dset
         }
 
@@ -411,8 +411,8 @@ class Trainer():
             content_style_disentenglement = losses.fixed_point_disentanglement(s_c2_s, s_c1_s, encoded_styles[:_bs])
 
             # triplet_style =  losses.get_triplet_loss(anchor, positive, negative, self.default_arguments.simulated_arguments.triplet_r)
-            triplet_style1 = losses.hard_triplet(style_labels, s_c1_s)
-            triplet_style2 = losses.hard_triplet(style_labels, s_c2_s)
+            triplet_style1 = losses.hard_triplet(style_labels, s_c1_s, self.default_arguments.simulated_arguments.triplet_r)
+            triplet_style2 = losses.hard_triplet(style_labels, s_c2_s, self.default_arguments.simulated_arguments.triplet_r)
             triplet_style = (triplet_style1+ triplet_style2)/2
 
             content_encoder_loss = self.l_content* content_preservation

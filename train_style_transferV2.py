@@ -26,7 +26,7 @@ def parse_arguments():
     
     parser.add_argument(
         "--style_datasets", 
-        help='Styles Datasets', 
+        help='Styles Datasets', nargs='+', 
         default=default_args.style_datasets_path
     )
     
