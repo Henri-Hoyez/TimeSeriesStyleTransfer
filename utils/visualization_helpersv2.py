@@ -14,7 +14,7 @@ def draw_arrow(A, B, ax:plt.Axes, color="b", width=0.001):
     ax.arrow(A[0], A[1], B[0] - A[0], B[1] - A[1],
               length_includes_head=True, color=color, width=width, alpha=0.95, head_width=width*4.0)
     
-def draw_arrows(xs, ys, ax:plt.Axes, color="b"):
+def draw_arrows(xs, ys, ax:plt.Axes, color="b", width=0.00025):
     # points = np.stack((xs, ys)).T
     # dist = points[1:] - points[:-1]
 
@@ -24,21 +24,18 @@ def draw_arrows(xs, ys, ax:plt.Axes, color="b"):
     for i in range(xs.shape[0]-1):
         point0 = [xs[i], ys[i]]
         point1 = [xs[i+1], ys[i+1]]
-        draw_arrow(point0, point1, ax, color=color, width=0.00025)
+        draw_arrow(point0, point1, ax, color=color, width=width)
         
         
 def draw_content_space(
     ax:plt.Axes,
     content_wiener_process:tf.Tensor,
     color='tab:blue',
-    label='An amayzing label.'):
+    label='An amayzing label.',
+    arrow_width=0.00025):
     
     ax.scatter(content_wiener_process[:, 0], content_wiener_process[:, 1], label=label, color=color)
-    draw_arrows(content_wiener_process[:, 0], content_wiener_process[:, 1], ax, color)
-    
-    
-    
-
+    draw_arrows(content_wiener_process[:, 0], content_wiener_process[:, 1], ax, color, width=arrow_width)
 
 
 def plot_generated_sequence(
@@ -102,6 +99,8 @@ def plot_generated_sequence(
     
     style_of_generated_viz = style_encoder(gen_c1_s)
     
+    
+    
     reduced_style_of_generated_viz = pca.transform(style_of_generated_viz)
         
     reduced_style_of_generated_viz = tf.reshape(reduced_style_of_generated_viz, (
@@ -109,7 +108,11 @@ def plot_generated_sequence(
         style_encoded.shape[0]//seed_style_sequences.shape[0], 
         -1))
     
+    cacateneted = tf.concat((content_of_generated_viz, content_of_style_sequences), 0)
     
+    x_min, x_max = np.min(cacateneted[:, 0]),  np.max(cacateneted[:, 0])
+    y_min, y_max =  np.min(cacateneted[:, 1]),  np.max(cacateneted[:, 1])
+    diag = np.sqrt((x_max - x_min)**2 + (y_max - y_min)**2)
     
     fig = plt.figure(figsize=(18, 10))
     fig.suptitle(title, fontsize=25)
@@ -152,15 +155,15 @@ def plot_generated_sequence(
     
     
     ax10 = fig.add_subplot(spec[2, :4])
-    ax10.set_title('Content Space.')
+    ax10.set_title('Content Space.'+ f"{diag}")
     
     ax11 = fig.add_subplot(spec[2, 4:])
     ax11.set_title('Style Space, Reduced with PCA.')   
      
     for i in range(n_style):
 
-        draw_content_space(ax10, content_of_style_sequences[i], color=colors[2*i], label=f"content space Real style {i+1}")
-        draw_content_space(ax10, content_of_generated_viz[i], color=colors[2*i+1], label=f"content space Gen  style {i+1}")
+        draw_content_space(ax10, content_of_style_sequences[i], color=colors[2*i], label=f"content space Real style {i+1}", arrow_width=.0005*diag)
+        draw_content_space(ax10, content_of_generated_viz[i], color=colors[2*i+1], label=f"content space Gen  style {i+1}", arrow_width=.0005*diag)
         
         ax11.scatter(
             reduced_style[i, :, 0], 

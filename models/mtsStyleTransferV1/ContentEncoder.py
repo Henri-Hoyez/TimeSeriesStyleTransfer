@@ -19,6 +19,10 @@ def make_content_encoder(seq_length:int, n_feat:int, feat_wiener:int) -> tf.kera
 
     
     x = tf.keras.layers.Conv1D(feat_wiener, 5, 1, padding='same', kernel_initializer=init, activation="linear")(x)
+    
+    # x = tf.math.l2_normalize(x, -1)
+    # x = tf.keras.layers.LayerNormalization()(x)
+    
 
     model = tf.keras.Model(_input, x)
     return model

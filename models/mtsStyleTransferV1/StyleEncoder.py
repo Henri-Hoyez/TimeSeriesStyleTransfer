@@ -41,6 +41,10 @@ def make_style_encoder(seq_length:int, n_feat:int, vector_output_shape:int)  -> 
     # x = tf.keras.layers.Dense(128, activation=None)(x)
     # x = tf.keras.layers.LeakyReLU()(x)
     x = tf.keras.layers.Dense(vector_output_shape, activation="linear")(x)
+    
+    # x = tf.math.l2_normalize(x, -1)
+    # x = tf.keras.layers.LayerNormalization()(x)
+    
 
     model = tf.keras.Model(_input, x)
     return model
