@@ -10,7 +10,7 @@ class AmplitudeShiftArgs():
         self.tensorboard_root_folder = "logs"
         self.default_root_save_folder = "to_evaluate"
         self.experiment_folder = "exp_folder"
-        self.exp_name = "MTS ST V1 amplitude"
+        self.exp_name = "MTS ST V1 amplitude New lambda"
 
         self.simulated_arguments = Proposed()
 

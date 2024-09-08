@@ -33,18 +33,18 @@ class Proposed:
     discrinator_step = 1
 
     ##### Generator loss parameters.
-    l_reconstr = .25
-    l_local = .1
-    l_global = .50
-    l_style_preservation = .7
+    l_reconstr = 2
+    l_local =  1.5#.2
+    l_global = 1.5
+    l_style_preservation = 1.
 
     ##### Content encoder loss
     l_content = .1
 
     ##### Style Encoder
     l_disentanglement = 2
-    l_triplet = 2
-    triplet_r = 0.25
+    l_triplet = 4
+    triplet_r = 0.0
 
     # Train the generator or the discriminator based on the 
     # Performance of the Discriminator (Here the accuracy.)

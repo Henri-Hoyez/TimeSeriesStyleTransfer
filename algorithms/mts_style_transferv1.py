@@ -489,8 +489,8 @@ class Trainer():
             content_style_disentenglement2 = losses.fixed_point_disentanglement(s_c2_s1, s_c1_s1, s1s)
             content_style_disentenglement = (content_style_disentenglement1 + content_style_disentenglement2)/2
 
-            content_encoder_loss = self.l_content* content_preservation + self.l_global* global_realness_loss
-            style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement+ self.style_preservation* global_style_loss
+            content_encoder_loss = self.l_content* content_preservation# + self.l_global* global_realness_loss
+            style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement+ self.style_preservation* global_style_loss + self.l_global* global_realness_loss
 
             g_loss = self.l_reconstr* reconstr_loss+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss+ self.l_local* local_realness_loss
 
