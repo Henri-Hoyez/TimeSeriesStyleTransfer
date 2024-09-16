@@ -25,7 +25,7 @@ def parse_arguments():
     )
     
     parser.add_argument(
-        "--c", 
+        "--style_datasets", 
         help='Styles Datasets', nargs='+', 
         default=default_args.style_datasets_path
     )
@@ -67,6 +67,7 @@ def parse_arguments():
 
 def main():
     shell_arguments = parse_arguments()
+    print(shell_arguments)
 
     standard_arguments = args()
     standard_arguments.simulated_arguments.epochs = shell_arguments.epochs

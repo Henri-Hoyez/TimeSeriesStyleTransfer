@@ -20,8 +20,6 @@ class Trainer():
         self.shell_arguments = shell_arguments
         self.default_arguments = default_arguments
         n_styles = len(shell_arguments.style_datasets)
-        
-        
 
         sequence_length = default_arguments.simulated_arguments.sequence_lenght_in_sample
         n_signals = default_arguments.simulated_arguments.n_feature
@@ -56,9 +54,9 @@ class Trainer():
         self.decoder = Decoder.make_generator(n_sample_wiener, feat_wiener, style_vector_size ,n_signals)
         self.global_discriminator = GlobalDiscriminator.make_global_discriminator(sequence_length, n_signals, n_styles)
         self.local_discriminator = LocalDiscriminator.create_local_discriminator(n_signals, sequence_length, n_styles)
-
-        # self.plot_models()
-        # exit()
+        
+        self.prepare()
+        self.prepare_loggers(n_styles)
 
 
     def plot_models(self):
@@ -67,6 +65,7 @@ class Trainer():
         tf.keras.utils.plot_model(self.local_discriminator, show_shapes=True, to_file='local_discriminator.png')
         tf.keras.utils.plot_model(self.content_encoder, show_shapes=True, to_file='content_encoder.png')
         tf.keras.utils.plot_model(self.style_encoder, show_shapes=True, to_file='style_encoder.png')
+
 
     def generate(self, content_batch, style_batch):
         content = self.content_encoder(content_batch, training=False)
@@ -93,7 +92,6 @@ class Trainer():
 
             self.local_discr_acc_train.reset_states()
             self.local_discr_acc_valid.reset_states()
-            
             
             print("[+] Train Step...")
             for i, (content_batch, style_batch) in enumerate(zip(self.dset_content_train, self.dsets_style_train)):
@@ -135,8 +133,6 @@ class Trainer():
                 self.generator_valid(content_sequence1, content_sequence2, style_batch)
 
                 self.logger.print_valid(e, self.epochs, vb, total_batch_valid, f"[{global_d_accs:0.2f}; {local_d_accs:0.2f}]: {discr_accs:0.4f} -> {discr_success_valid:0.4f}")
-                
-
 
             self.training_evaluation(e)
             self.logger.log_train_value("40 - Discriminator Sucess", discr_success, e)            
@@ -149,20 +145,7 @@ class Trainer():
         self.save()
         
     def multistyle_viz(self, epoch:int):
-        save_to = f"{self.logger.full_path}/{epoch}.png"
-        
-        # # Generate Sequences for the graphs.
-        # content_of_content = self.content_encoder(np.array([self.seed_content_valid[0]]), training=False)
-        # # content_of_styles = self.content_encoder(self.seed_styles_valid[:, 0], training=False)
-        
-        # content_of_content = np.array([content_of_content]* self.seed_styles_valid.shape[0])
-        # shape = content_of_content.shape
-        # content_of_content = content_of_content.reshape((-1, shape[-2], shape[-1]))
-        
-        # style_vectors = self.style_encoder(self.seed_styles_valid[:, 0])
-        
-        # generated_sequences = self.decoder([content_of_content, style_vectors])
-        # generated_sequences = tf.concat(generated_sequences, -1)   
+        save_to = f"{self.logger.full_path}/{epoch}.png"  
         
         # Generate Sequences with the same content and all styles.
         content_of_content = self.content_encoder(np.array([self.seed_content_valid[0]]))
@@ -204,15 +187,14 @@ class Trainer():
                 
     
     def training_evaluation(self, epoch):
-        generation_style1_train = self.generate(self.seed_content_train, self.seed_styles_train[0])
-        generation_style1_valid = self.generate(self.seed_content_valid, self.seed_styles_valid[0])
+        
+        generation_style_train = np.array([self.generate(self.seed_content_train, style_train) for style_train in self.seed_styles_train])
+        generation_style_valid = np.array([self.generate(self.seed_content_train, style_train) for style_train in self.seed_styles_valid])
 
-        generation_style2_train = self.generate(self.seed_content_train, self.seed_styles_train[1])
-        generation_style2_valid = self.generate(self.seed_content_valid, self.seed_styles_valid[1])
-
-        self.metric_evaluation(generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid)
-        self.simple_noise_metric(generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid)
-        self.simple_amplitude_metric(generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid)
+        # self.metric_evaluation(generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid)
+        
+        self.simple_noise_metric(generation_style_train, generation_style_valid)
+        self.simple_amplitude_metric(generation_style_train, generation_style_valid)
 
         plot_buff = self.make_viz()
         
@@ -222,66 +204,61 @@ class Trainer():
         self.logger.log_train(plot_buff, epoch)
         self.logger.log_valid(epoch)
 
-    def metric_evaluation(self, generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid):
-        metric_s1_train = metric.compute_metric(generation_style1_train, self.seed_styles_train[0], self.default_arguments.simulated_arguments)
-        metric_s1_valid = metric.compute_metric(generation_style1_valid, self.seed_styles_valid[0], self.default_arguments.simulated_arguments)
+    # def metric_evaluation(self, generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid):
+    #     metric_s1_train = metric.compute_metric(generation_style1_train, self.seed_styles_train[0], self.default_arguments.simulated_arguments)
+    #     metric_s1_valid = metric.compute_metric(generation_style1_valid, self.seed_styles_valid[0], self.default_arguments.simulated_arguments)
 
-        metric_s2_train = metric.compute_metric(generation_style2_train, self.seed_styles_train[1], self.default_arguments.simulated_arguments)
-        metric_s2_valid = metric.compute_metric(generation_style2_valid, self.seed_styles_valid[1], self.default_arguments.simulated_arguments)
+    #     metric_s2_train = metric.compute_metric(generation_style2_train, self.seed_styles_train[1], self.default_arguments.simulated_arguments)
+    #     metric_s2_valid = metric.compute_metric(generation_style2_valid, self.seed_styles_valid[1], self.default_arguments.simulated_arguments)
         
-        self.logger.met_corr_style1_train(metric_s1_train)
-        self.logger.met_corr_style2_train(metric_s2_train)
+    #     self.logger.met_corr_style1_train(metric_s1_train)
+    #     self.logger.met_corr_style2_train(metric_s2_train)
 
-        self.logger.met_corr_style1_valid(metric_s1_valid)
-        self.logger.met_corr_style2_valid(metric_s2_valid)
+    #     self.logger.met_corr_style1_valid(metric_s1_valid)
+    #     self.logger.met_corr_style2_valid(metric_s2_valid)
 
-    def simple_noise_metric(self, generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid):
-        # Compute the simple metric specificaly made for noise domain shift.
-        # C'est Degeulasse !
-        content_gen_style1_train, generated_s1_noise_train = simple_metric.simple_metric_on_noise(generation_style1_train)
-        content_gen_style1_valid, generated_s1_noise_valid = simple_metric.simple_metric_on_noise(generation_style1_valid)
-        content_gen_style2_train, generated_s2_noise_train = simple_metric.simple_metric_on_noise(generation_style2_train)
-        content_gen_style2_valid, generated_s2_noise_valid = simple_metric.simple_metric_on_noise(generation_style2_valid)
-
-        _, seed_style1_noise_train = simple_metric.simple_metric_on_noise(self.seed_styles_train[0])
-        _, seed_style1_noise_valid = simple_metric.simple_metric_on_noise(self.seed_styles_valid[0])
-        _, seed_style2_noise_train = simple_metric.simple_metric_on_noise(self.seed_styles_train[1])
-        _, seed_style2_noise_valid = simple_metric.simple_metric_on_noise(self.seed_styles_valid[1])
-
+    def simple_noise_metric(self, generation_style_train, generation_style_valid):
+        
         seed_content_trends_train, _ = simple_metric.simple_metric_on_noise(self.seed_content_train)
         seed_content_trends_valid, _ = simple_metric.simple_metric_on_noise(self.seed_content_valid)
-
-        self.logger.met_noise_sim_style1_train(np.mean(np.abs(seed_style1_noise_train - generated_s1_noise_train)))
-        self.logger.met_noise_sim_style1_valid(np.mean(np.abs(seed_style1_noise_valid - generated_s1_noise_valid)))
-
-        self.logger.met_noise_sim_style2_train(np.mean(np.abs(seed_style2_noise_train - generated_s2_noise_train)))
-        self.logger.met_noise_sim_style2_valid(np.mean(np.abs(seed_style2_noise_valid - generated_s2_noise_valid)))
-
-        self.logger.met_content_sim_style_1_train(np.mean(np.abs(seed_content_trends_train - content_gen_style1_train)))
-        self.logger.met_content_sim_style_2_train(np.mean(np.abs(seed_content_trends_train - content_gen_style2_train)))
         
-        self.logger.met_content_sim_style_1_valid(np.mean(np.abs(seed_content_trends_valid - content_gen_style1_valid)))
-        self.logger.met_content_sim_style_2_valid(np.mean(np.abs(seed_content_trends_valid - content_gen_style2_valid)))
+        for i in range(generation_style_train.shape[0]):
+            noise_key = f"00 - Noise Similarity Style {i+ 1}"
+            content_key = f"02 - Content Similarity Style {i+ 1}"
+            
+            content_gen_train, generated_noise_train = simple_metric.simple_metric_on_noise(generation_style_train[i])
+            content_gen_valid, generated_noise_valid = simple_metric.simple_metric_on_noise(generation_style_valid[i])
+            
+            _, seed_style_noise_train = simple_metric.simple_metric_on_noise(self.seed_styles_train[i])
+            _, seed_style_noise_valid = simple_metric.simple_metric_on_noise(self.seed_styles_valid[i])
+            
+            noise_similarity_train = np.mean(np.abs(seed_style_noise_train - generated_noise_train))
+            noise_similarity_valid = np.mean(np.abs(seed_style_noise_valid - generated_noise_valid))
+            
+            content_similarity_train = np.mean(np.abs(seed_content_trends_train - content_gen_train))
+            content_similarity_valid = np.mean(np.abs(seed_content_trends_valid - content_gen_valid))
+            
+            self.logger.train_loggers[noise_key](noise_similarity_train)
+            self.logger.valid_loggers[noise_key](noise_similarity_valid)
+            
+            self.logger.train_loggers[content_key](content_similarity_train)
+            self.logger.valid_loggers[content_key](content_similarity_valid)
+    
 
-    def simple_amplitude_metric(self, generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid):
-        style1_ampl_diff_train = simple_metric.simple_amplitude_metric(self.seed_styles_train[0], generation_style1_train)
-        style1_ampl_diff_valid = simple_metric.simple_amplitude_metric(self.seed_styles_valid[0], generation_style1_valid)
-        style2_ampl_diff_train = simple_metric.simple_amplitude_metric(self.seed_styles_train[1], generation_style2_train)
-        style2_ampl_diff_valid = simple_metric.simple_amplitude_metric(self.seed_styles_valid[1], generation_style2_valid)
+    def simple_amplitude_metric(self, generation_style_train, generation_style_valid):
+        
+        for i in range(generation_style_train.shape[0]):
+            ampli_key = f"01 - Amplitude Similarity Style {i+ 1}"
+            
+            ampl_diff_train = simple_metric.simple_amplitude_metric(self.seed_styles_train[i], generation_style_train[i])
+            ampl_diff_valid = simple_metric.simple_amplitude_metric(self.seed_styles_valid[i], generation_style_valid[i])
 
-        self.logger.met_amplitude_sim_style1_train(style1_ampl_diff_train)
-        self.logger.met_amplitude_sim_style2_train(style2_ampl_diff_train)
-        self.logger.met_amplitude_sim_style1_valid(style1_ampl_diff_valid)
-        self.logger.met_amplitude_sim_style2_valid(style2_ampl_diff_valid)
+            self.logger.train_loggers[ampli_key](ampl_diff_train)
+            self.logger.valid_loggers[ampli_key](ampl_diff_valid)
+            
+        
 
     def make_viz(self):
-        # vis_fig = visualization_helpersv2.plot_generated_sequence(
-        #     self.content_encoder, self.style_encoder, self.decoder,
-        #     self.seed_content_valid, 
-        #     self.seed_styles_valid[0], 
-        #     self.seed_styles_valid[1],
-        #     config=self.default_arguments.simulated_arguments,
-        #     )
         
         vis_fig = visualization_helpersv2.plot_generated_sequence(
             self.content_encoder, self.style_encoder, self.decoder, 
@@ -323,10 +300,55 @@ class Trainer():
         self.seed_content_valid = get_batches(self.dset_content_valid, 25)
 
 
+    def prepare_loggers(self, n_style:int):
+        
+        noise_metric = []
+        ampli_metric = []
+        content_sim_metric = []
+        
+        for i in range(n_style):
+            noise_metric.append(f"00 - Noise Similarity Style {i+ 1}")    
+            ampli_metric.append(f"01 - Amplitude Similarity Style {i+ 1}")
+            content_sim_metric.append(f"02 - Content Similarity Style {i+ 1}")
+            
+            
+        metric_keys = [
+            "10 - Total Generator Loss", 
+            "11 - Reconstruction from Content",
+            "12 - Central Realness",
+            "13 - Local Realness",
+            
+            "20 - Style Loss",
+            "21 - Triplet Loss",
+            "22 - Disentanglement Loss",
+            
+            "30 - Content Loss",
+            
+            "40 - Global Discriminator Loss",
+            "40 - Global Discriminator Acc", 
+            
+            "40 - Local Discriminator Loss",
+            "40 - Local Discriminator Acc", 
+            
+            "41 - Global Discriminator Style Loss (Real Data)",
+            "41 - Global Discriminator Style Loss (Fake Data)",
+            
+            "42 - Local Discriminator Style Loss (Real Data)",
+            "42 - Local Discriminator Style Loss (Fake Data)",
+            ]
+        
+    
+        metric_keys.extend(noise_metric)
+        metric_keys.extend(ampli_metric)
+        metric_keys.extend(content_sim_metric)
+        
+        self.logger = TensorboardLog(self.shell_arguments, metric_keys)
+
+        
+
+
     def prepare(self):
-
-        self.logger = TensorboardLog(self.shell_arguments)
-
+        
         self.opt_content_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
         self.opt_style_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
         self.opt_decoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
@@ -345,7 +367,6 @@ class Trainer():
         self.dsets_style_train = styles_dset_train
         self.dsets_style_valid = styles_dset_valid
 
-        self.prepare()
 
     @tf.function
     def discriminator_step(self, content_sequence1, style_batch, backward):
@@ -390,9 +411,6 @@ class Trainer():
             self.global_discriminator_opt.apply_gradients(zip(global_discr_gradient, self.global_discriminator.trainable_variables)) 
             self.local_discriminator_opt.apply_gradients(zip(grads, self.local_discriminator.trainable_variables))
     
-        self.logger.met_central_d_train(g_crit_loss)
-        self.logger.met_central_d_style_real_train(g_style_real)
-        self.logger.met_channel_d_train(l_loss)
 
         # Calculate the performances of the Discriminator.
         real_labels = tf.ones_like(g_crit_real)
@@ -410,9 +428,13 @@ class Trainer():
             losses.local_discriminator_accuracy(real_labels, l_crit_real),
             losses.local_discriminator_accuracy(generation_labels, l_crit_fake)
         ])
+        
+        self.logger.train_loggers['40 - Global Discriminator Loss'](g_crit_loss)
+        self.logger.train_loggers['41 - Global Discriminator Style Loss (Real Data)'](g_style_real)
+        self.logger.train_loggers['40 - Local Discriminator Loss'](l_loss)
 
-        self.logger.met_central_d_accs_train(global_accs)
-        self.logger.met_channel_d_accs_train(channel_accs)
+        self.logger.train_loggers['40 - Global Discriminator Acc'](global_accs)
+        self.logger.train_loggers["40 - Local Discriminator Acc"](channel_accs)
 
         return global_accs, channel_accs
 
@@ -493,18 +515,18 @@ class Trainer():
         self.opt_content_encoder.apply_gradients(zip(content_grad, self.content_encoder.trainable_variables))
         self.opt_style_encoder.apply_gradients(zip(style_grad, self.style_encoder.trainable_variables))
 
-        self.logger.met_generator_train(g_loss)
-        self.logger.met_generator_reconstruction_train(reconstr_loss)
+        self.logger.train_loggers['10 - Total Generator Loss'](g_loss)
+        self.logger.train_loggers["11 - Reconstruction from Content"](reconstr_loss)
 
-        self.logger.met_generator_local_realness_train(local_realness_loss)
-        self.logger.met_generator_global_realness_train(global_realness_loss)
+        self.logger.train_loggers["13 - Local Realness"](local_realness_loss)
+        self.logger.train_loggers["12 - Central Realness"](global_realness_loss)
 
-        self.logger.met_central_d_style_fake_train(global_style_loss)
+        self.logger.train_loggers["41 - Global Discriminator Style Loss (Fake Data)"](global_style_loss)
 
-        self.logger.met_disentanglement_train(content_style_disentenglement)
-        self.logger.met_triplet_train(triplet_style)
-        self.logger.met_style_encoder_train(style_encoder_loss)
-        self.logger.met_content_encoder_train(content_preservation)
+        self.logger.train_loggers["22 - Disentanglement Loss"](content_style_disentenglement)
+        self.logger.train_loggers["21 - Triplet Loss"](triplet_style)
+        self.logger.train_loggers["20 - Style Loss"](style_encoder_loss)
+        self.logger.train_loggers["30 - Content Loss"](content_preservation)
 
     @tf.function
     def generator_valid(self, content_sequence1, content_sequence2, style_batch):
@@ -569,22 +591,19 @@ class Trainer():
         style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement  + self.l_global* global_realness_loss + self.style_preservation* global_style_loss
 
         g_loss = self.l_reconstr* reconstr_loss+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss+ self.l_local* local_realness_loss
-
-        self.logger.met_generator_valid(g_loss)
-        self.logger.met_generator_reconstruction_valid(reconstr_loss)
-
-        self.logger.met_generator_local_realness_valid(local_realness_loss)
-        self.logger.met_generator_global_realness_valid(global_realness_loss)
-
-        self.logger.met_central_d_style_fake_valid(global_style_loss)
-
-        self.logger.met_content_encoder_valid(content_preservation)
         
-        self.logger.met_content_encoder_valid(content_encoder_loss)
-        
-        self.logger.met_style_encoder_valid(style_encoder_loss)
-        self.logger.met_triplet_valid(triplet_style)
-        self.logger.met_disentanglement_valid(content_style_disentenglement)
+        self.logger.valid_loggers['10 - Total Generator Loss'](g_loss)
+        self.logger.valid_loggers["11 - Reconstruction from Content"](reconstr_loss)
+
+        self.logger.valid_loggers["13 - Local Realness"](local_realness_loss)
+        self.logger.valid_loggers["12 - Central Realness"](global_realness_loss)
+
+        self.logger.valid_loggers["41 - Global Discriminator Style Loss (Fake Data)"](global_style_loss)
+
+        self.logger.valid_loggers["21 - Triplet Loss"](triplet_style)
+        self.logger.valid_loggers["20 - Style Loss"](style_encoder_loss)
+        self.logger.valid_loggers["30 - Content Loss"](content_preservation)
+        self.logger.valid_loggers["22 - Disentanglement Loss"](content_style_disentenglement)
 
 
 
@@ -620,10 +639,6 @@ class Trainer():
 
         l_loss = losses.local_discriminator_loss(l_crit_real, l_crit_fake)
 
-        self.logger.met_central_d_valid(g_crit_loss)
-        self.logger.met_central_d_style_real_valid(g_style_real)
-
-        self.logger.met_channel_d_valid(l_loss)
 
         # Calculate the performances of the Discriminator.
         real_labels = tf.ones_like(g_crit_real)
@@ -640,9 +655,13 @@ class Trainer():
             losses.local_discriminator_accuracy(real_labels, l_crit_real),
             losses.local_discriminator_accuracy(generation_labels, l_crit_fake)
         ])
+        
+        self.logger.valid_loggers['40 - Global Discriminator Loss'](g_crit_loss)
+        self.logger.valid_loggers['41 - Global Discriminator Style Loss (Real Data)'](g_style_real)
+        self.logger.valid_loggers['40 - Local Discriminator Loss'](l_loss)
 
-        self.logger.met_central_d_accs_valid(global_accs)
-        self.logger.met_channel_d_accs_valid(channel_accs)
+        self.logger.valid_loggers['40 - Global Discriminator Acc'](global_accs)
+        self.logger.valid_loggers["40 - Local Discriminator Acc"](channel_accs)
 
         return global_accs, channel_accs
     
