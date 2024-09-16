@@ -6,45 +6,52 @@ import tensorflow as tf
 
 
 def make_style_encoder(seq_length:int, n_feat:int, vector_output_shape:int)  -> tf.keras.Model:
-    init = tf.keras.initializers.RandomNormal(seed=42)
 
     _input = tf.keras.Input((seq_length, n_feat))
 
-    x = tf.keras.layers.Conv1D(32, 5, 2, padding='same', kernel_initializer=init)(_input) 
+    x = tf.keras.layers.Conv1D(16, 5, 2, padding='same')(_input) 
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
 
-    # x = tf.keras.layers.Conv1D(16, 5, 1, padding='same', kernel_initializer=init)(x)
-    # # x = tf.keras.layers.BatchNormalization()(x)
-    # x = tf.keras.layers.LeakyReLU()(x)
+    x = tf.keras.layers.Conv1D(32, 5, 1, padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.LeakyReLU()(x)
 
-    # x = tf.keras.layers.Conv1D(16, 5, 1, padding='same', kernel_initializer=init)(x)
+    # x = tf.keras.layers.Conv1D(16, 5, 1, padding='same')(x)
     # # x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.LeakyReLU()(x)
 # ###
 
-
-    x = tf.keras.layers.Conv1D(64, 5, 2, padding='same', kernel_initializer=init)(x)
+    x = tf.keras.layers.Conv1D(64, 5, 2, padding='same')(x)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
 
-    # x = tf.keras.layers.Conv1D(128, 5, 1, padding='same', kernel_initializer=init)(x)
-    # # x = tf.keras.layers.BatchNormalization()(x)
-    # x = tf.keras.layers.LeakyReLU()(x)
+    x = tf.keras.layers.Conv1D(128, 5, 1, padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.LeakyReLU()(x)
 
-    # x = tf.keras.layers.Conv1D(128, 5, 1, padding='same', kernel_initializer=init)(x)
+    # x = tf.keras.layers.Conv1D(128, 5, 1, padding='same')(x)
     # # x = tf.keras.layers.BatchNormalization()(x)
     # x = tf.keras.layers.LeakyReLU()(x)
 ####
 
     x = tf.keras.layers.Flatten()(x)
-    # x = tf.keras.layers.Dense(128, activation=None)(x)
-    # x = tf.keras.layers.LeakyReLU()(x)
-    x = tf.keras.layers.Dense(vector_output_shape, activation="linear")(x)
+    x = tf.keras.layers.Dense(128)(x)
+    x = tf.keras.layers.LeakyReLU()(x)
+    x = tf.keras.layers.Dense(vector_output_shape)(x)
     
-    # x = tf.math.l2_normalize(x, -1)
-    # x = tf.keras.layers.LayerNormalization()(x)
+    # x = tf.linalg.norm(x, axis=-1)
     
+    # x = x / tf.reshape(tf.linalg.norm(x, axis=-1), (-1, 1))
+    # x = tf.keras.layers.Activation("tanh")(x)
+    # tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1))
+    
+    x = tf.clip_by_norm(x, 1., -1)
 
     model = tf.keras.Model(_input, x)
+    
+    # print(model.summary())
+    
+    # exit()
+    
     return model

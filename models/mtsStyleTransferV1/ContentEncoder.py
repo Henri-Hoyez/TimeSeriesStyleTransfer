@@ -8,21 +8,30 @@ def make_content_encoder(seq_length:int, n_feat:int, feat_wiener:int) -> tf.kera
 
     _input = tf.keras.Input((seq_length, n_feat))
 
-    x = tf.keras.layers.Conv1D(32, 5, 2, padding='same', kernel_initializer=init)(_input)
+    x = tf.keras.layers.Conv1D(32, 5, 2, padding='same')(_input)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
         
     
-    x = tf.keras.layers.Conv1D(64, 5, 2, padding='same', kernel_initializer=init)(x)
+    x = tf.keras.layers.Conv1D(64, 5, 2, padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.LeakyReLU()(x)
+    
+    x = tf.keras.layers.Conv1D(64, 5, 2, padding='same')(x)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
 
     
-    x = tf.keras.layers.Conv1D(feat_wiener, 5, 1, padding='same', kernel_initializer=init, activation="linear")(x)
+    x = tf.keras.layers.Conv1D(feat_wiener, 5, 1, padding='same', activation="linear")(x)
+    
     
     # x = tf.math.l2_normalize(x, -1)
     # x = tf.keras.layers.LayerNormalization()(x)
     
 
     model = tf.keras.Model(_input, x)
+    
+    # print(model.summary())
+    
+    # exit()
     return model

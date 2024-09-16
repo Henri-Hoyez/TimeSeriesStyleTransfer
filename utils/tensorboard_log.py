@@ -14,14 +14,16 @@ from datetime import datetime
 class TensorboardLog():
     def __init__(self, shell_arguments) -> None:
         root = shell_arguments.tensorboard_root
+        
+        n_style = len(shell_arguments.style_datasets)
 
         date_str = datetime.now().strftime('%Y-%m-%d_%H_%M_%S')
         exp_name = shell_arguments.exp_name
 
-        full_path = f"{root}/{date_str} - {exp_name}"
+        self.full_path = f"{root}/{date_str} - {exp_name}"
 
-        self.train_summary_writer = tf.summary.create_file_writer(full_path + "/train")
-        self.valid_summary_writer = tf.summary.create_file_writer(full_path + "/valid")
+        self.train_summary_writer = tf.summary.create_file_writer(self.full_path + "/train")
+        self.valid_summary_writer = tf.summary.create_file_writer(self.full_path + "/valid")
 
         self.intanciate_loggers()
 
@@ -110,7 +112,6 @@ class TensorboardLog():
 
             tf.summary.scalar("42 - Local Discriminator Style Loss (Real Data)", self.met_channel_d_style_real_valid.result(), step=epoch)
             tf.summary.scalar("42 - Local Discriminator Style Loss (Fake Data)", self.met_channel_d_style_fake_valid.result(), step=epoch)
-
 
 
 

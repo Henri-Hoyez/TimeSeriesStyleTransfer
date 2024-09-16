@@ -20,10 +20,11 @@ def make_global_discriminator(seq_length:int, n_signals:int, n_classes:int):
     x = tf.keras.layers.Dropout(0.2)(x)
 
 
-    flatened = tf.keras.layers.Flatten()(_input)
-    crit_hidden_layer = tf.keras.layers.Dense(10)(flatened)
+    flatened = tf.keras.layers.Flatten()(x)
+    flatened = tf.keras.layers.Dropout(0.0)(flatened)
+    
+    crit_hidden_layer = tf.keras.layers.Dense(20)(flatened)
     _output = tf.keras.layers.Dense(1, activation="sigmoid")(crit_hidden_layer)
-
 
     class_hidden = tf.keras.layers.Dense(10, activation='relu')(flatened)
     # class_hidden = tf.keras.layers.Dense(50, activation='relu')(class_hidden)

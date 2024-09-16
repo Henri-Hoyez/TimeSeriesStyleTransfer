@@ -7,8 +7,8 @@ from models import losses
 import numpy as np
 
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-os.environ["TF_USE_LEGACY_KERAS"]="1"
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+# os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
 
 
@@ -35,7 +35,8 @@ class Trainer():
         self.style_preservation = self.default_arguments.simulated_arguments.l_style_preservation
         self.l_local = self.default_arguments.simulated_arguments.l_local
         self.l_content = self.default_arguments.simulated_arguments.l_content
-
+        self.e_adv = self.default_arguments.simulated_arguments.encoder_adv
+        
         # self.style_encoder_adv = self.default_arguments.simulated_arguments.style_encoder_adv
         self.discr_success_th = self.default_arguments.simulated_arguments.discriminator_success_threashold
         self.normal_training_epochs = self.default_arguments.simulated_arguments.normal_training_epochs
@@ -269,12 +270,12 @@ class Trainer():
 
         self.logger = TensorboardLog(self.shell_arguments)
 
-        self.opt_content_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
-        self.opt_style_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
-        self.opt_decoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
-        self.local_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
-        self.global_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
-
+        self.opt_content_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005) # 0.0005
+        self.opt_style_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005) # 0.0005
+        self.opt_decoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005) # 0.0005
+        self.local_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.0005) # 0.0005
+        self.global_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.0005) # 0.0005
+        
         # self.opt_content_encoder = tf.keras.optimizers.Adam(learning_rate=0.0005) # , beta_1=0. 
         # self.opt_style_encoder = tf.keras.optimizers.Adam(learning_rate=0.0005) # , beta_1=0. 
         # self.opt_decoder = tf.keras.optimizers.Adam(learning_rate=0.0005) # , beta_1=0. 
@@ -489,8 +490,8 @@ class Trainer():
             content_style_disentenglement2 = losses.fixed_point_disentanglement(s_c2_s1, s_c1_s1, s1s)
             content_style_disentenglement = (content_style_disentenglement1 + content_style_disentenglement2)/2
 
-            content_encoder_loss = self.l_content* content_preservation# + self.l_global* global_realness_loss
-            style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement+ self.style_preservation* global_style_loss + self.l_global* global_realness_loss
+            content_encoder_loss = self.l_content* content_preservation + self.e_adv* global_realness_loss + self.e_adv* global_style_loss
+            style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement  + self.e_adv* global_realness_loss + self.e_adv* global_style_loss
 
             g_loss = self.l_reconstr* reconstr_loss+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss+ self.l_local* local_realness_loss
 
@@ -544,7 +545,7 @@ class Trainer():
 
         s_generations = self.style_encoder(merged_generations, training=True)
         c_generations = self.content_encoder(merged_generations, training=True)
-            
+        
         style_labels = np.zeros((2* _bs,))
         style_labels[_bs:]= 1.
 
@@ -594,6 +595,7 @@ class Trainer():
 
         s_c1_s1 = s_generations[:_bs]
         s_c1_s2 = s_generations[2*_bs: 3*_bs]
+        s_c2_s1 = s_generations[_bs: 2*_bs]
         s_c2_s2 = s_generations[3*_bs:] 
 
         s1s = encoded_styles[:_bs]
@@ -603,11 +605,16 @@ class Trainer():
         content_preservation2 = losses.fixed_point_content(c2s, generated_c2s)
         content_preservation = (content_preservation1+ content_preservation2)/2
 
-        triplet_style =  losses.get_triplet_loss(s1s, s_c1_s1, s_c1_s2, self.default_arguments.simulated_arguments.triplet_r)
-        content_style_disentenglement = losses.fixed_point_disentanglement(s_c2_s2, s_c1_s2, s2s)
+        triplet_style1 =  losses.get_triplet_loss(s1s, s_c1_s1, s_c1_s2, self.default_arguments.simulated_arguments.triplet_r)
+        triplet_style2 =  losses.get_triplet_loss(s2s, s_c1_s2, s_c1_s1, self.default_arguments.simulated_arguments.triplet_r)
+        triplet_style = (triplet_style1+ triplet_style2)/2
 
-        content_encoder_loss = self.l_content* content_preservation
-        style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement
+        content_style_disentenglement1 = losses.fixed_point_disentanglement(s_c2_s2, s_c1_s2, s2s)
+        content_style_disentenglement2 = losses.fixed_point_disentanglement(s_c2_s1, s_c1_s1, s1s)
+        content_style_disentenglement = (content_style_disentenglement1 + content_style_disentenglement2)/2
+
+        content_encoder_loss = self.l_content* content_preservation+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss
+        style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement  + self.l_global* global_realness_loss + self.style_preservation* global_style_loss
 
         g_loss = self.l_reconstr* reconstr_loss+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss+ self.l_local* local_realness_loss
 

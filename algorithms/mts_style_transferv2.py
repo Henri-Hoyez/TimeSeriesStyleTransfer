@@ -5,19 +5,23 @@ from utils import metric, simple_metric, visualization_helpersv2, MLFlow_utils
 
 from models import losses
 import numpy as np
+from sklearn.decomposition import PCA
+
 
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-os.environ["TF_USE_LEGACY_KERAS"]="1"
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+# os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
 
 
 class Trainer():
     def __init__(self, shell_arguments, default_arguments) -> None:
+        
         self.shell_arguments = shell_arguments
         self.default_arguments = default_arguments
         n_styles = len(shell_arguments.style_datasets)
-
+        
+        
 
         sequence_length = default_arguments.simulated_arguments.sequence_lenght_in_sample
         n_signals = default_arguments.simulated_arguments.n_feature
@@ -35,6 +39,7 @@ class Trainer():
         self.style_preservation = self.default_arguments.simulated_arguments.l_style_preservation
         self.l_local = self.default_arguments.simulated_arguments.l_local
         self.l_content = self.default_arguments.simulated_arguments.l_content
+        self.e_adv = self.default_arguments.simulated_arguments.encoder_adv
 
         # self.style_encoder_adv = self.default_arguments.simulated_arguments.style_encoder_adv
         self.discr_success_th = self.default_arguments.simulated_arguments.discriminator_success_threashold
@@ -52,7 +57,8 @@ class Trainer():
         self.global_discriminator = GlobalDiscriminator.make_global_discriminator(sequence_length, n_signals, n_styles)
         self.local_discriminator = LocalDiscriminator.create_local_discriminator(n_signals, sequence_length, n_styles)
 
-        # self.style_encoder.summary()
+        # self.plot_models()
+        # exit()
 
 
     def plot_models(self):
@@ -62,15 +68,13 @@ class Trainer():
         tf.keras.utils.plot_model(self.content_encoder, show_shapes=True, to_file='content_encoder.png')
         tf.keras.utils.plot_model(self.style_encoder, show_shapes=True, to_file='style_encoder.png')
 
-
-    
-
     def generate(self, content_batch, style_batch):
         content = self.content_encoder(content_batch, training=False)
         style = self.style_encoder(style_batch, training=False)
         generated = self.decoder([content, style], training=False)
         generated = tf.concat(generated, -1)
         return generated
+    
     
     def train(self):
         total_batch_train = "?"
@@ -143,6 +147,61 @@ class Trainer():
                 total_batch_valid = vb
         
         self.save()
+        
+    def multistyle_viz(self, epoch:int):
+        save_to = f"{self.logger.full_path}/{epoch}.png"
+        
+        # # Generate Sequences for the graphs.
+        # content_of_content = self.content_encoder(np.array([self.seed_content_valid[0]]), training=False)
+        # # content_of_styles = self.content_encoder(self.seed_styles_valid[:, 0], training=False)
+        
+        # content_of_content = np.array([content_of_content]* self.seed_styles_valid.shape[0])
+        # shape = content_of_content.shape
+        # content_of_content = content_of_content.reshape((-1, shape[-2], shape[-1]))
+        
+        # style_vectors = self.style_encoder(self.seed_styles_valid[:, 0])
+        
+        # generated_sequences = self.decoder([content_of_content, style_vectors])
+        # generated_sequences = tf.concat(generated_sequences, -1)   
+        
+        # Generate Sequences with the same content and all styles.
+        content_of_content = self.content_encoder(np.array([self.seed_content_valid[0]]))
+        content_for_generation = np.array([content_of_content] * self.seed_styles_valid.shape[1])
+        shape = content_for_generation.shape
+        content_for_generation = content_for_generation.reshape((-1, shape[-2], shape[-1]))
+        
+        # Make the Style Space for the Real and Simulated Sequences.
+        real_style_space = np.array([ self.style_encoder(style_sequences) for style_sequences in self.seed_styles_valid ])
+        
+        # Generate sequence of different style, but with the same content.
+        generated_sequences = np.array([ tf.concat(self.decoder([content_for_generation, style_vectors]), -1) for style_vectors in real_style_space ])
+        
+        # Extract the content.
+        content_of_gens = np.array([ self.content_encoder(generated_sequence) for generated_sequence in generated_sequences ])
+        
+        # Extract the style.
+        style_of_gen = np.array([ self.style_encoder(generated_sequence) for generated_sequence in generated_sequences ])
+        
+        # Reduce the dimentionality for the style.
+        pca = PCA(2)
+                
+        all_styles = tf.concat((real_style_space, style_of_gen), 0)
+        all_styles = tf.reshape(all_styles, (-1, all_styles.shape[-1]))
+                
+        pca = pca.fit(all_styles)
+        
+        real_reduced_styles = np.array([ pca.transform(particular_style_space) for particular_style_space in real_style_space ])
+        gen_reduced_styles = np.array([ pca.transform(particular_style_space) for particular_style_space in style_of_gen ])
+                
+        visualization_helpersv2.plot_multistyle_sequences(
+            self.seed_content_valid[0], 
+            self.seed_styles_valid[:, 0], 
+            generated_sequences[:, 0], 
+            content_of_content, content_of_gens[:, 0],
+            real_reduced_styles, gen_reduced_styles,
+            epoch, save_to
+            )
+                
     
     def training_evaluation(self, epoch):
         generation_style1_train = self.generate(self.seed_content_train, self.seed_styles_train[0])
@@ -156,7 +215,10 @@ class Trainer():
         self.simple_amplitude_metric(generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid)
 
         plot_buff = self.make_viz()
-
+        
+        # Make multistyle visualization. 
+        self.multistyle_viz(epoch)
+        
         self.logger.log_train(plot_buff, epoch)
         self.logger.log_valid(epoch)
 
@@ -415,8 +477,8 @@ class Trainer():
             triplet_style2 = losses.hard_triplet(style_labels, s_c2_s, self.default_arguments.simulated_arguments.triplet_r)
             triplet_style = (triplet_style1+ triplet_style2)/2
 
-            content_encoder_loss = self.l_content* content_preservation + self.l_global* global_realness_loss 
-            style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement + self.style_preservation* global_style_loss
+            content_encoder_loss = self.l_content* content_preservation+ self.e_adv* global_realness_loss + self.e_adv* global_style_loss
+            style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement  + self.e_adv* global_realness_loss + self.e_adv* global_style_loss
 
             g_loss = self.l_reconstr* reconstr_loss+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss+ self.l_local* local_realness_loss
 
@@ -503,9 +565,8 @@ class Trainer():
         triplet_style2 = losses.hard_triplet(style_labels, s_c2_s)
         triplet_style = (triplet_style1+ triplet_style2)/2
 
-
-        content_encoder_loss = self.l_content* content_preservation
-        style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement
+        content_encoder_loss = self.l_content* content_preservation+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss
+        style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement  + self.l_global* global_realness_loss + self.style_preservation* global_style_loss
 
         g_loss = self.l_reconstr* reconstr_loss+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss+ self.l_local* local_realness_loss
 
@@ -518,6 +579,8 @@ class Trainer():
         self.logger.met_central_d_style_fake_valid(global_style_loss)
 
         self.logger.met_content_encoder_valid(content_preservation)
+        
+        self.logger.met_content_encoder_valid(content_encoder_loss)
         
         self.logger.met_style_encoder_valid(style_encoder_loss)
         self.logger.met_triplet_valid(triplet_style)

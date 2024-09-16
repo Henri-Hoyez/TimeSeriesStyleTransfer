@@ -2,15 +2,16 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
+from tensorflow.keras.regularizers import l2
 
 
 def local_discriminator_part(_input, n_classes:int):
 
-    x = tf.keras.layers.Conv1D(16, 5, 2, padding='same')(_input)
+    x = tf.keras.layers.Conv1D(16, 5, 2, padding='same', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01))(_input)
     x = tf.keras.layers.LeakyReLU()(x)
     x = tf.keras.layers.Dropout(0.2)(x)
 
-    x = tf.keras.layers.Conv1D(16, 5, 2, padding='same')(x)
+    x = tf.keras.layers.Conv1D(16, 5, 2, padding='same', kernel_regularizer=l2(0.01), bias_regularizer=l2(0.01))(x)
     x = tf.keras.layers.LeakyReLU()(x)
     x = tf.keras.layers.Dropout(0.2)(x)
 

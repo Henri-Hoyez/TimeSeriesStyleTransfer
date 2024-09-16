@@ -4,10 +4,13 @@ from configs.SimulatedData import Proposed
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
+import matplotlib as mpl
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
+
 
 
 def draw_arrow(A, B, ax:plt.Axes, color="b", width=0.001):
@@ -49,8 +52,11 @@ def plot_generated_sequence(
     # Generate viz for plots 
     style_index = 0
     n_style = seed_style_sequences.shape[0]
-    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple']
-
+    
+    # cmap = mpl.colormaps['plasma']
+    cmap = plt.get_cmap("tab20")
+    colors = cmap(np.linspace(0, 1, n_style*2))
+    
     c = np.array([content_sequences[0]])
     c = content_encoder(c)
     content_encoded = tf.concat([c]*seed_style_sequences.shape[0], 0)
@@ -89,17 +95,13 @@ def plot_generated_sequence(
 
     content_of_style_sequences = content_encoder(seed_style_sequences[:, style_index, :])
     
-
     # Make point for Style Scatter plot. 
     c1s = np.array([c[0]]* reshaped_style_sequences.shape[0])
-    
-    
+
     gen_c1_s = decoder([c1s, style_encoded])
     gen_c1_s = tf.concat(gen_c1_s, -1)
     
     style_of_generated_viz = style_encoder(gen_c1_s)
-    
-    
     
     reduced_style_of_generated_viz = pca.transform(style_of_generated_viz)
         
@@ -114,7 +116,7 @@ def plot_generated_sequence(
     y_min, y_max =  np.min(cacateneted[:, 1]),  np.max(cacateneted[:, 1])
     diag = np.sqrt((x_max - x_min)**2 + (y_max - y_min)**2)
     
-    fig = plt.figure(figsize=(18, 10))
+    fig = plt.figure(figsize=(25, 15))
     fig.suptitle(title, fontsize=25)
     spec= fig.add_gridspec(3, 8)
     
@@ -161,23 +163,24 @@ def plot_generated_sequence(
     ax11.set_title('Style Space, Reduced with PCA.')   
      
     for i in range(n_style):
-
+        colors[2*i+1]
         draw_content_space(ax10, content_of_style_sequences[i], color=colors[2*i], label=f"content space Real style {i+1}", arrow_width=.0005*diag)
         draw_content_space(ax10, content_of_generated_viz[i], color=colors[2*i+1], label=f"content space Gen  style {i+1}", arrow_width=.0005*diag)
         
         ax11.scatter(
-            reduced_style[i, :, 0], 
-            reduced_style[i,:, 1], 
+            reduced_style[i, :150, 0], 
+            reduced_style[i,:150, 1], 
             label=f'Real Style {i}.', 
-            alpha=0.25
+            alpha=0.25, 
+            color=colors[2*i]
             )
         
         ax11.scatter(
-            reduced_style_of_generated_viz[i, :, 0], 
-            reduced_style_of_generated_viz[i,:, 1], 
-            label=f'Generated Style {i}.', alpha=0.25
+            reduced_style_of_generated_viz[i, :150, 0], 
+            reduced_style_of_generated_viz[i,:150, 1], 
+            label=f'Generated Style {i}.', alpha=0.25,
+            color=colors[2*i+1]
             )
-        
         
         
     ax10.legend()
@@ -189,3 +192,91 @@ def plot_generated_sequence(
     plt.tight_layout()
     
     return fig
+
+
+######### 
+
+def make_graph_on_subplot(ax:plt.Axes, sequence:tf.Tensor, title:str):
+    ax.set_title(title)
+    
+    ax.plot(sequence)
+    ax.grid(True)
+    
+    return ax
+
+
+def plot_multistyle_sequences(
+    content_sequence:tf.Tensor, 
+    style_sequences:tf.Tensor, 
+    generated_sequence:tf.Tensor, 
+    real_content_space, gen_content_space, 
+    real_style_space, gen_style_space,
+    epoch:int, to_file:str=None):
+    
+    n_style = style_sequences.shape[0]    
+    
+    cmap = plt.get_cmap("tab20")
+    colors = cmap(np.linspace(0, 1, n_style*2))
+    
+    all_values = np.concatenate((np.expand_dims(content_sequence, axis=0), style_sequences), axis=0)
+    _min, _max = np.min(all_values)-1, np.max(all_values)+ 1
+    
+    cacateneted = tf.concat((real_content_space, gen_content_space), 0)
+    x_min, x_max = np.min(cacateneted[:, 0]),  np.max(cacateneted[:, 0])
+    y_min, y_max =  np.min(cacateneted[:, 1]),  np.max(cacateneted[:, 1])
+    diag = np.sqrt((x_max - x_min)**2 + (y_max - y_min)**2)
+        
+    fig = plt.figure(figsize=(25, 30))
+    fig.suptitle(f"Multiple Style Generation Epoch: {epoch}", fontsize=25)
+    spec= fig.add_gridspec(n_style+ 2, 2)
+    
+    ax00 = fig.add_subplot(spec[0, :])
+    
+    make_graph_on_subplot(ax00, content_sequence, "Content Sequence.")
+    ax00.set_ylim(_min, _max)
+    
+    ax_content = fig.add_subplot(spec[-1, 0])
+    ax_content.set_title("Content Space.")
+    
+    draw_content_space(ax_content, real_content_space[0], color=colors[0], label=f"Content Sequence.", arrow_width=.0005*diag) 
+    
+    ax_content.grid(True)
+    
+    ax_style = fig.add_subplot(spec[-1, 1])
+    ax_style.set_title("Style Space.")
+    ax_style.grid(True)
+    
+    for i in range(n_style):
+        axi1 = fig.add_subplot(spec[i+ 1, 0])
+        axi1 = make_graph_on_subplot(axi1, style_sequences[i], f"Style {i+ 1}.")
+        axi1.set_ylim(_min, _max)
+        
+        axi2 = fig.add_subplot(spec[i+ 1, 1])
+        axi2 = make_graph_on_subplot(axi2, generated_sequence[i], f"Generated sequence on Style {i+ 1}.")
+        axi2.set_ylim(_min, _max)
+        
+        ax_style.scatter(
+            real_style_space[i, :150, 0], 
+            real_style_space[i,:150, 1], 
+            label=f'Real Style {i}.', 
+            alpha=0.25, 
+            color=colors[2*i]
+            )
+        
+        ax_style.scatter(
+            gen_style_space[i, :150, 0], 
+            gen_style_space[i,:150, 1], 
+            label=f'Gen Style {i}.', 
+            alpha=0.25, 
+            color=colors[2*i+ 1]
+            )
+        
+        draw_content_space(ax_content, gen_content_space[i], color=colors[i+1], label=f"Content of Gen Style {i+1}", arrow_width=.0005*diag) 
+    
+    ax_style.legend()  
+    ax_content.legend()
+    plt.tight_layout()
+    
+    if not to_file is None:
+        plt.savefig(to_file)
+    
