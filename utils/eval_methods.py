@@ -27,8 +27,6 @@ def umap_plot(real_style1, real_style2, gen_style1, gen_style2, root_folder, tit
     save_to= f"{root_folder}/UMAP_plot.png"
     n_sequences= real_style1.shape[0]
 
-    print(real_style1.shape, real_style2.shape, gen_style1.shape, gen_style2.shape)
-
     concatenated = tf.concat((real_style1, real_style2, gen_style1, gen_style2), 0)
 
     concatenated = tf.transpose(concatenated, (0,2, 1))

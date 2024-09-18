@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 import matplotlib as mpl
 
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ["TF_USE_LEGACY_KERAS"]="1"

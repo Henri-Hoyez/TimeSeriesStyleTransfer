@@ -102,7 +102,7 @@ def load_dset(df_path:str, args:dict, drop_labels=False, bs = 64) -> tf.data.Dat
     gran = args.simulated_arguments.granularity
     overlap = args.simulated_arguments.overlap
     
-
+    print(df_path)
     return dataLoader.loading_wrapper(df_path, sequence_length, gran, overlap, bs, drop_labels=drop_labels)
 
 def translate_labeled_dataset(
@@ -118,10 +118,10 @@ def translate_labeled_dataset(
     style_space = style_dset.map(lambda seq: style_encoder(seq[:,:,:-1]))
     labels = content_dset.map(lambda seq: seq[:,label_idx,-1])
 
-    content_style = tf.data.Dataset.zip(content_space, style_space)
+    content_style = tf.data.Dataset.zip((content_space, style_space))
 
     translated = content_style.map(lambda c,s: tf.concat(decoder([c,s], training=False), -1))
-    dset_final = tf.data.Dataset.zip(translated, labels)
+    dset_final = tf.data.Dataset.zip((translated, labels))
 
     return dset_final
 

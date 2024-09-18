@@ -283,8 +283,7 @@ class Trainer():
         print("[+] Save Parameters...")
 
         parameters = {
-            "dset_style_1":self.shell_arguments.style_datasets[0], 
-            "dset_style_2":self.shell_arguments.style_datasets[1], 
+            "style_datasets":self.shell_arguments.style_datasets, 
             "dset_content":self.shell_arguments.content_dset
         }
 
