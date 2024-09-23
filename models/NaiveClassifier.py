@@ -8,11 +8,11 @@ def make_naive_discriminator(seq_shape:tuple, n_classes:int)-> tf.keras.models.M
 
     model.add(tf.keras.Input(shape=seq_shape))
 
-    model.add(tf.keras.layers.Conv1D(filters=64, kernel_size=3, activation='relu', padding="same"))
+    model.add(tf.keras.layers.Conv1D(filters=16, kernel_size=3, activation='relu', padding="same"))
     # model.add(tf.keras.layers.BatchNormalization())
     model.add(tf.keras.layers.MaxPool1D(pool_size=2))
 
-    model.add(tf.keras.layers.Conv1D(filters=32, kernel_size=3, padding="same", activation='relu'))
+    model.add(tf.keras.layers.Conv1D(filters=16, kernel_size=3, padding="same", activation='relu'))
     # model.add(tf.keras.layers.BatchNormalization())
     model.add(tf.keras.layers.MaxPool1D(pool_size=2))
     # model.add(tf.keras.layers.LeakyReLU())

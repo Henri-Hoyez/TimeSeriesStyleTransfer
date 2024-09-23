@@ -42,10 +42,19 @@ def pd2tf(df:pd.DataFrame, sequence_lenght, granularity, overlap, batch_size, sh
 
     return dset
 
-def loading_wrapper(df_path:str, sequence_lenght:int, granularity:int, overlap:int, batch_size:int, shuffle:bool=True, drop_labels:bool=True):
-    _df = load_dataframe(df_path, drop_labels)
 
-    _df_train, _df_valid = train_valid_split(_df)
+def remove_format(path:str):
+    return ".".join(path.split('.')[:-1])
+
+def loading_wrapper(df_path:str, sequence_lenght:int, granularity:int, overlap:int, batch_size:int, shuffle:bool=True, drop_labels:bool=True):
+    
+    path_placeholder = remove_format(df_path)
+    
+    train_path = f"{path_placeholder}_train.h5"
+    valid_path = f"{path_placeholder}_valid.h5"
+    
+    _df_train = load_dataframe(train_path, drop_labels)
+    _df_valid = load_dataframe(valid_path, drop_labels)
 
     _dset_train = pd2tf(_df_train, sequence_lenght, granularity, overlap, batch_size, shuffle)
     _dset_valid = pd2tf(_df_valid, sequence_lenght, granularity, overlap, batch_size, False)

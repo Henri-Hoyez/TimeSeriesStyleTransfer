@@ -102,7 +102,6 @@ def load_dset(df_path:str, args:dict, drop_labels=False, bs = 64) -> tf.data.Dat
     gran = args.simulated_arguments.granularity
     overlap = args.simulated_arguments.overlap
     
-    print(df_path)
     return dataLoader.loading_wrapper(df_path, sequence_length, gran, overlap, bs, drop_labels=drop_labels)
 
 def translate_labeled_dataset(

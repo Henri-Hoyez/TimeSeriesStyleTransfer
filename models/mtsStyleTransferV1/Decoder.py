@@ -46,11 +46,15 @@ def upsampling_block(content_input:tf.keras.layers.Layer, style_input:tf.keras.l
 
 def generator_part(content_input, style_input):
 
-    x = upsampling_block(content_input, style_input, 128)
+    x = upsampling_block(content_input, style_input, 64) # 16
 
-    x = upsampling_block(x, style_input, 64)
+    x = upsampling_block(x, style_input, 32) # 32
     
-    x = upsampling_block(x, style_input, 32)
+    x = upsampling_block(x, style_input, 32)  # 64
+    
+    x = upsampling_block(x, style_input, 32)  # 128
+    
+    # x = upsampling_block(x, style_input, 32)  # 256
     # output
     x = tf.keras.layers.Conv1DTranspose(1, 5, 1, padding='same')(x)
 

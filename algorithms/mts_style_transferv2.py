@@ -57,6 +57,8 @@ class Trainer():
         
         self.prepare()
         self.prepare_loggers(n_styles)
+        # self.plot_models()
+        # exit()
 
 
     def plot_models(self):
@@ -145,51 +147,58 @@ class Trainer():
         self.save()
         
     def multistyle_viz(self, epoch:int):
-        save_to = f"{self.logger.full_path}/{epoch}.png"  
         
-        # Generate Sequences with the same content and all styles.
-        content_of_content = self.content_encoder(np.array([self.seed_content_valid[0]]))
-        content_for_generation = np.array([content_of_content] * self.seed_styles_valid.shape[1])
-        shape = content_for_generation.shape
-        content_for_generation = content_for_generation.reshape((-1, shape[-2], shape[-1]))
+        for i, content_sequence in enumerate(self.content_viz_sequences):
         
-        # Make the Style Space for the Real and Simulated Sequences.
-        real_style_space = np.array([ self.style_encoder(style_sequences) for style_sequences in self.seed_styles_valid ])
+            save_to = f"{self.logger.full_path}/{epoch}_{i}.png"  
         
-        # Generate sequence of different style, but with the same content.
-        generated_sequences = np.array([ tf.concat(self.decoder([content_for_generation, style_vectors]), -1) for style_vectors in real_style_space ])
-        
-        # Extract the content.
-        content_of_gens = np.array([ self.content_encoder(generated_sequence) for generated_sequence in generated_sequences ])
-        
-        # Extract the style.
-        style_of_gen = np.array([ self.style_encoder(generated_sequence) for generated_sequence in generated_sequences ])
-        
-        # Reduce the dimentionality for the style.
-        pca = PCA(2)
-                
-        all_styles = tf.concat((real_style_space, style_of_gen), 0)
-        all_styles = tf.reshape(all_styles, (-1, all_styles.shape[-1]))
-                
-        pca = pca.fit(all_styles)
-        
-        real_reduced_styles = np.array([ pca.transform(particular_style_space) for particular_style_space in real_style_space ])
-        gen_reduced_styles = np.array([ pca.transform(particular_style_space) for particular_style_space in style_of_gen ])
-                
-        visualization_helpersv2.plot_multistyle_sequences(
-            self.seed_content_valid[0], 
-            self.seed_styles_valid[:, 0], 
-            generated_sequences[:, 0], 
-            content_of_content, content_of_gens[:, 0],
-            real_reduced_styles, gen_reduced_styles,
-            epoch, save_to
-            )
+            # Generate Sequences with the same content and all styles.
+            content_of_content = self.content_encoder(np.array([content_sequence]))
+            content_for_generation = np.array([content_of_content] * self.seed_styles_valid.shape[1])
+            shape = content_for_generation.shape
+            content_for_generation = content_for_generation.reshape((-1, shape[-2], shape[-1]))
+            
+            # Make the Style Space for the Real and Simulated Sequences.
+            real_style_space = np.array([ self.style_encoder(style_sequences) for style_sequences in self.seed_styles_valid ])
+            
+            # Generate sequence of different style, but with the same content.
+            generated_sequences = np.array([ tf.concat(self.decoder([content_for_generation, style_vectors]), -1) for style_vectors in real_style_space ])
+            
+            # Extract the content.
+            content_of_gens = np.array([ self.content_encoder(generated_sequence) for generated_sequence in generated_sequences ])
+            
+            # Extract the style.
+            style_of_gen = np.array([ self.style_encoder(generated_sequence) for generated_sequence in generated_sequences ])
+            
+            # Reduce the dimentionality for the style.
+            pca = PCA(2)
+                    
+            all_styles = tf.concat((real_style_space, style_of_gen), 0)
+            all_styles = tf.reshape(all_styles, (-1, all_styles.shape[-1]))
+                    
+            pca = pca.fit(all_styles)
+            
+            real_reduced_styles = np.array([ pca.transform(particular_style_space) for particular_style_space in real_style_space ])
+            gen_reduced_styles = np.array([ pca.transform(particular_style_space) for particular_style_space in style_of_gen ])
+                    
+            visualization_helpersv2.plot_multistyle_sequences(
+                content_sequence, 
+                self.seed_styles_valid[:, 0], 
+                generated_sequences[:, 0], 
+                content_of_content, content_of_gens[:, 0],
+                real_reduced_styles, gen_reduced_styles,
+                epoch, save_to
+                )
                 
     
     def training_evaluation(self, epoch):
         
+        # print(self.seed_content_train.shape, self.seed_styles_train.shape)
+        # print(self.seed_content_valid.shape, self.seed_styles_valid.shape)
+        # exit()
+        
         generation_style_train = np.array([self.generate(self.seed_content_train, style_train) for style_train in self.seed_styles_train])
-        generation_style_valid = np.array([self.generate(self.seed_content_train, style_train) for style_train in self.seed_styles_valid])
+        generation_style_valid = np.array([self.generate(self.seed_content_valid, style_train) for style_train in self.seed_styles_valid])
 
         # self.metric_evaluation(generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid)
         
@@ -284,19 +293,47 @@ class Trainer():
 
         parameters = {
             "style_datasets":self.shell_arguments.style_datasets, 
-            "dset_content":self.shell_arguments.content_dset
+            "dset_content":self.shell_arguments.content_dset,
+            "sequence_lenght_in_sample":self.default_arguments.simulated_arguments.sequence_lenght_in_sample,
+            "granularity":self.default_arguments.simulated_arguments.granularity,
+            "overlap":self.default_arguments.simulated_arguments.overlap,
+            "epochs":self.default_arguments.simulated_arguments.epochs,
+            "n_feature":self.default_arguments.simulated_arguments.n_feature,
+            "seq_shape":self.default_arguments.simulated_arguments.seq_shape,
+            "batch_size":self.default_arguments.simulated_arguments.batch_size,
+            "n_styles":self.default_arguments.simulated_arguments.n_styles,
+            "style_vector_size":self.default_arguments.simulated_arguments.style_vector_size,
+            "n_wiener":self.default_arguments.simulated_arguments.n_wiener,
+            "n_sample_wiener":self.default_arguments.simulated_arguments.n_sample_wiener,
+            "noise_dim":self.default_arguments.simulated_arguments.noise_dim,
+            "n_validation_sequences":self.default_arguments.simulated_arguments.n_validation_sequences,
+            "discrinator_step":self.default_arguments.simulated_arguments.discrinator_step,
+            "l_reconstr":self.default_arguments.simulated_arguments.l_reconstr,
+            "l_local":self.default_arguments.simulated_arguments.l_local,
+            "l_global":self.default_arguments.simulated_arguments.l_global,
+            "l_style_preservation":self.default_arguments.simulated_arguments.l_style_preservation,
+            "l_content":self.default_arguments.simulated_arguments.l_content,
+            "encoder_adv":self.default_arguments.simulated_arguments.encoder_adv,
+            "l_disentanglement":self.default_arguments.simulated_arguments.l_disentanglement,
+            "l_triplet":self.default_arguments.simulated_arguments.l_triplet,
+            "triplet_r":self.default_arguments.simulated_arguments.triplet_r,
+            "discriminator_success_threashold":self.default_arguments.simulated_arguments.discriminator_success_threashold,
+            "alpha":self.default_arguments.simulated_arguments.alpha,
+            "normal_training_epochs":self.default_arguments.simulated_arguments.normal_training_epochs
         }
 
         MLFlow_utils.save_configuration(f"{root}/model_config.json", parameters)
         print("[+] Saved !")
 
-    def set_seeds(self, _seed_style_train, _seed_style_valid):
+    def set_seeds(self, _seed_style_train, _seed_style_valid, content_viz_sequences):
 
         self.seed_styles_train = _seed_style_train
         self.seed_styles_valid = _seed_style_valid
         
         self.seed_content_train = get_batches(self.dset_content_train, 25)
         self.seed_content_valid = get_batches(self.dset_content_valid, 25)
+        
+        self.content_viz_sequences = content_viz_sequences
 
 
     def prepare_loggers(self, n_style:int):

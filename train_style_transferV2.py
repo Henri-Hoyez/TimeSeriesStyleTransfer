@@ -5,11 +5,16 @@ import os
 # os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
 import argparse
+import numpy as np
 
 from utils.gpu_memory_grow import gpu_memory_grow
-from configs.mts_style_transfer_v2.args import DafaultArguments as args
+# from configs.mts_style_transfer_v2.args import DafaultArguments as args
+# from configs.mts_style_transfer_v2.args_real import DafaultArguments as args
+from configs.mts_style_transfer_v2.args_sim import DafaultArguments as args
 from utils import dataLoader
 from algorithms.mts_style_transferv2 import Trainer
+
+import matplotlib.pyplot as plt
 
 gpus = tf.config.list_physical_devices('GPU')
 gpu_memory_grow(gpus)
@@ -64,10 +69,43 @@ def parse_arguments():
     return arguments
 
 
+def remove_format(path:str):
+    return ".".join(path.split('.')[:-1])
+
+
+def get_seed_visualization_content_sequences(content_path:str, sequence_len:int):
+    path_placeholder = remove_format(content_path)
+    
+    valid_path = f"{path_placeholder}_valid.h5"
+    
+    _df_valid = dataLoader.load_dataframe(valid_path, False)
+    labels = _df_valid['labels'].unique()
+    
+    content_sequences = []
+    
+    for l in labels:
+        df_part = _df_valid[_df_valid["labels"] == l]
+        
+        indexes = df_part.index
+        
+        start_index = indexes[0]
+        end_index= indexes[sequence_len]
+
+        content_sequence = df_part.loc[start_index: end_index-1].values[:, :-1]
+        content_sequences.append(content_sequence)
+
+        
+        # plt.figure(figsize=(18, 10))
+        # plt.plot(content_sequence)
+        # plt.savefig(f"{l}.png")
+        
+        
+    return content_sequences
+    
+    
 
 def main():
     shell_arguments = parse_arguments()
-    print(shell_arguments)
 
     standard_arguments = args()
     standard_arguments.simulated_arguments.epochs = shell_arguments.epochs
@@ -78,6 +116,8 @@ def main():
     bs = standard_arguments.simulated_arguments.batch_size
     ###
     
+    content_viz_sequences = get_seed_visualization_content_sequences(shell_arguments.content_dset, sequence_length)
+        
     content_dset_train, content_dset_valid = dataLoader.loading_wrapper(
         shell_arguments.content_dset,
         sequence_length, 
@@ -88,6 +128,7 @@ def main():
     # Load Styles:
     style_dsets_train, style_dsets_valid = [], []
     style_seeds_train, style_seeds_valid = [], []
+    
     for i, style_path in enumerate(shell_arguments.style_datasets):
         style_labels = tf.zeros((1,)) + i
 
@@ -100,7 +141,7 @@ def main():
         
         _style_seed_train = dataLoader.get_batches(style_train.batch(bs), 50)
         _style_seed_valid = dataLoader.get_batches(style_valid.batch(bs), 50)
-
+        
         style_seeds_train.append(_style_seed_train)
         style_seeds_valid.append(_style_seed_valid)
 
@@ -110,6 +151,7 @@ def main():
         style_dsets_train.append(style_train)
         style_dsets_valid.append(style_valid)
         
+    
     style_seeds_train = tf.convert_to_tensor(style_seeds_train)
     style_seeds_valid = tf.convert_to_tensor(style_seeds_valid)
 
@@ -123,7 +165,7 @@ def main():
         style_dsets_train, style_dsets_valid,
     )
 
-    trainner.set_seeds(style_seeds_train, style_seeds_valid)
+    trainner.set_seeds(style_seeds_train, style_seeds_valid, content_viz_sequences)
 
     trainner.train()
 

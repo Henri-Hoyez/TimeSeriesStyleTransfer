@@ -220,7 +220,7 @@ def plot_multistyle_sequences(
     colors = cmap(np.linspace(0, 1, n_style*2))
     
     all_values = np.concatenate((np.expand_dims(content_sequence, axis=0), style_sequences), axis=0)
-    _min, _max = np.min(all_values)-1, np.max(all_values)+ 1
+    _min, _max = np.min(all_values)-0.5, np.max(all_values)+ 0.5
     
     cacateneted = tf.concat((real_content_space, gen_content_space), 0)
     x_min, x_max = np.min(cacateneted[:, 0]),  np.max(cacateneted[:, 0])
