@@ -16,7 +16,7 @@ def train_naive_discriminator(train_dset, valid_dset, args, epochs, n_classes):
     seq_shape = args.simulated_arguments.seq_shape
 
     naive_discr = make_naive_discriminator(seq_shape, n_classes)
-    history = naive_discr.fit(train_dset, validation_data=valid_dset, epochs=epochs)
+    history = naive_discr.fit(train_dset, validation_data=valid_dset, epochs=epochs, verbose=0)
 
     return naive_discr.evaluate(valid_dset)[1], history
 

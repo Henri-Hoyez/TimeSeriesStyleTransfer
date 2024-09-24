@@ -46,17 +46,9 @@ class DafaultArguments():
 
         self.simulated_arguments = Proposed()
 
-
         self.tensorboard_root_folder = "logs"
         self.default_root_save_folder = "to_evaluate"
         self.experiment_folder = "exp_folder"
-        self.exp_name = "MTS-ST V2 TS Simulated Amplitude"
+        self.exp_name = "MTS-ST V2 TS Simulated Amplitude bigger content space"
         
-    def toJSON(self):
-        return json.dumps(
-            self,
-            default=lambda o: o.__dict__, 
-            sort_keys=True,
-            indent=4)
-
         

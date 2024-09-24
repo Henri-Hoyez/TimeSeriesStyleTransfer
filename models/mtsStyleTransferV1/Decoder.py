@@ -1,20 +1,23 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-os.environ["TF_USE_LEGACY_KERAS"]="1"
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+# os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
+from tensorflow import keras
+
+
 
 from models.Layers.AdaIN import AdaIN
 
 
 
-def linear_projection(style_input:tf.keras.layers.Layer, actual_seq_len:int):
+def linear_projection(style_input:keras.layers.Layer, actual_seq_len:int):
 
     adapter = tf.keras.layers.Dense(actual_seq_len)(style_input)
     adapter = tf.keras.layers.Reshape((actual_seq_len, 1))(adapter)
 
     return adapter
 
-def upsampling_block(content_input:tf.keras.layers.Layer, style_input:tf.keras.layers.Layer, filters):
+def upsampling_block(content_input:keras.layers.Layer, style_input:tf.keras.layers.Layer, filters):
 
     actual_sequence_len = content_input.shape[1]
 
@@ -52,7 +55,7 @@ def generator_part(content_input, style_input):
     
     x = upsampling_block(x, style_input, 32)  # 64
     
-    x = upsampling_block(x, style_input, 32)  # 128
+    # x = upsampling_block(x, style_input, 32)  # 128
     
     # x = upsampling_block(x, style_input, 32)  # 256
     # output

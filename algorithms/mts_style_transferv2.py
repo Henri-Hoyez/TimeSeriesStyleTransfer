@@ -12,7 +12,7 @@ import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 # os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
-
+from datetime import datetime
 
 class Trainer():
     def __init__(self, shell_arguments, default_arguments) -> None:
@@ -196,16 +196,30 @@ class Trainer():
         # print(self.seed_content_train.shape, self.seed_styles_train.shape)
         # print(self.seed_content_valid.shape, self.seed_styles_valid.shape)
         # exit()
+        start = datetime.now()
         
         generation_style_train = np.array([self.generate(self.seed_content_train, style_train) for style_train in self.seed_styles_train])
         generation_style_valid = np.array([self.generate(self.seed_content_valid, style_train) for style_train in self.seed_styles_valid])
-
+        print()
+        print("Generate Sequence Time Elapsed:", datetime.now()- start)
         # self.metric_evaluation(generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid)
         
+        start = datetime.now()
         self.simple_noise_metric(generation_style_train, generation_style_valid)
+        print()
+        print("Noise metric Time Elapsed:", datetime.now()- start)
+        
+        start = datetime.now()
         self.simple_amplitude_metric(generation_style_train, generation_style_valid)
+        print()
+        print("Ampl metric Time Elapsed:", datetime.now()- start)
+
+
+        start = datetime.now()
 
         plot_buff = self.make_viz()
+        print()
+        print("Make Viz Time Elapsed:", datetime.now()- start)
         
         # Make multistyle visualization. 
         self.multistyle_viz(epoch)
@@ -330,8 +344,8 @@ class Trainer():
         self.seed_styles_train = _seed_style_train
         self.seed_styles_valid = _seed_style_valid
         
-        self.seed_content_train = get_batches(self.dset_content_train, 25)
-        self.seed_content_valid = get_batches(self.dset_content_valid, 25)
+        self.seed_content_train = get_batches(self.dset_content_train, 1)
+        self.seed_content_valid = get_batches(self.dset_content_valid, 1)
         
         self.content_viz_sequences = content_viz_sequences
 

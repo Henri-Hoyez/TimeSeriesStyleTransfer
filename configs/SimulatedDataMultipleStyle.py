@@ -26,8 +26,10 @@ class Proposed:
     # loss Parameters:
     n_styles = 2
     style_vector_size = 16
+    
     n_wiener = 2
-    n_sample_wiener = 4 #sequence_lenght_in_sample//4
+    n_sample_wiener = 8 #sequence_lenght_in_sample//4
+    
     noise_dim = (n_sample_wiener, n_wiener)
     n_validation_sequences = 500
     discrinator_step = 1

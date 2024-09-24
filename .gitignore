@@ -15,3 +15,7 @@ mlruns/
 .*yaml
 events.out*
 old_ipython/
+
+*.sh
+*.csv
+*.dat

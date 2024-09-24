@@ -7,6 +7,8 @@ import tensorflow as tf
 import argparse
 import numpy as np
 
+test = tf.keras.layers.Dense(100)
+
 from utils.gpu_memory_grow import gpu_memory_grow
 # from configs.mts_style_transfer_v2.args import DafaultArguments as args
 # from configs.mts_style_transfer_v2.args_real import DafaultArguments as args
@@ -139,8 +141,8 @@ def main():
             overlap,
             0)
         
-        _style_seed_train = dataLoader.get_batches(style_train.batch(bs), 50)
-        _style_seed_valid = dataLoader.get_batches(style_valid.batch(bs), 50)
+        _style_seed_train = dataLoader.get_batches(style_train.batch(bs), 2)
+        _style_seed_valid = dataLoader.get_batches(style_valid.batch(bs), 2)
         
         style_seeds_train.append(_style_seed_train)
         style_seeds_valid.append(_style_seed_valid)
