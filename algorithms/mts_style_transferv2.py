@@ -189,7 +189,7 @@ class Trainer():
                 real_reduced_styles, gen_reduced_styles,
                 epoch, save_to
                 )
-                
+
     
     def training_evaluation(self, epoch):
         
@@ -580,11 +580,9 @@ class Trainer():
 
     @tf.function
     def generator_valid(self, content_sequence1, content_sequence2, style_batch):
-        # Reconstruction Loss: Try to generate the same sequence given
-        # it's content and style.
+        
         style_sequences, style_labels = style_batch[0],  style_batch[1]
-
-        # Here, things get a little bit more complicated :)
+        
         # Reconstruction Loss: Try to generate the same sequence given
         # it's content and style.
         contents = tf.concat([content_sequence1, content_sequence2], 0)
@@ -633,15 +631,16 @@ class Trainer():
 
         content_style_disentenglement = losses.fixed_point_disentanglement(s_c2_s, s_c1_s, encoded_styles[:_bs])
 
-        triplet_style1 = losses.hard_triplet(style_labels, s_c1_s)
-        triplet_style2 = losses.hard_triplet(style_labels, s_c2_s)
+        # triplet_style =  losses.get_triplet_loss(anchor, positive, negative, self.default_arguments.simulated_arguments.triplet_r)
+        triplet_style1 = losses.hard_triplet(style_labels, s_c1_s, self.default_arguments.simulated_arguments.triplet_r)
+        triplet_style2 = losses.hard_triplet(style_labels, s_c2_s, self.default_arguments.simulated_arguments.triplet_r)
         triplet_style = (triplet_style1+ triplet_style2)/2
 
-        content_encoder_loss = self.l_content* content_preservation+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss
-        style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement  + self.l_global* global_realness_loss + self.style_preservation* global_style_loss
+        content_encoder_loss = self.l_content* content_preservation+ self.e_adv* global_realness_loss + self.e_adv* global_style_loss
+        style_encoder_loss = self.l_triplet* triplet_style + self.l_disentanglement* content_style_disentenglement  + self.e_adv* global_realness_loss + self.e_adv* global_style_loss
 
         g_loss = self.l_reconstr* reconstr_loss+ self.l_global* global_realness_loss + self.style_preservation* global_style_loss+ self.l_local* local_realness_loss
-        
+
         self.logger.valid_loggers['10 - Total Generator Loss'](g_loss)
         self.logger.valid_loggers["11 - Reconstruction from Content"](reconstr_loss)
 

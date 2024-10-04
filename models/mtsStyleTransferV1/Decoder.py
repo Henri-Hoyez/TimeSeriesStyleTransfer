@@ -19,9 +19,15 @@ def linear_projection(style_input:keras.layers.Layer, actual_seq_len:int):
 
 def upsampling_block(content_input:keras.layers.Layer, style_input:tf.keras.layers.Layer, filters):
 
-    actual_sequence_len = content_input.shape[1]
+    x = tf.keras.layers.Conv1DTranspose(filters, 5, 2, padding='same')(content_input)
+    
+    actual_sequence_len = x.shape[1]
+    
+    adapted_style_input = linear_projection(style_input, actual_sequence_len)
+    x = AdaIN()(x, adapted_style_input)
+    x = tf.keras.layers.LeakyReLU()(x)
 
-    x = tf.keras.layers.Conv1D(filters, 5, 1, padding='same')(content_input)
+    x = tf.keras.layers.Conv1D(filters, 5, 1, padding='same')(x)
     adapted_style_input = linear_projection(style_input, actual_sequence_len)
     x = AdaIN()(x, adapted_style_input)
     x = tf.keras.layers.LeakyReLU()(x)
@@ -31,19 +37,6 @@ def upsampling_block(content_input:keras.layers.Layer, style_input:tf.keras.laye
     x = AdaIN()(x, adapted_style_input)
     x = tf.keras.layers.LeakyReLU()(x)  
 
-    # x = tf.keras.layers.Conv1D(filters, 5, 1, padding='same')(x)
-    # adapted_style_input = linear_projection(style_input, actual_sequence_len)
-    # x = AdaIN()(x, adapted_style_input)
-    # x = tf.keras.layers.LeakyReLU()(x)  
-
-    # x = tf.keras.layers.Conv1D(filters, 5, 1, padding='same')(x)
-    # adapted_style_input = linear_projection(style_input, actual_sequence_len)
-    # x = AdaIN()(x, adapted_style_input)
-    # x = tf.keras.layers.LeakyReLU()(x)  
-
-    x = tf.keras.layers.Conv1DTranspose(filters, 5, 2, padding='same')(x)
-    # x = tf.keras.layers.LeakyReLU()(x)
-
     return x
 
 
@@ -51,7 +44,7 @@ def generator_part(content_input, style_input):
 
     x = upsampling_block(content_input, style_input, 64) # 16
 
-    x = upsampling_block(x, style_input, 32) # 32
+    x = upsampling_block(x, style_input, 64) # 32
     
     x = upsampling_block(x, style_input, 32)  # 64
     

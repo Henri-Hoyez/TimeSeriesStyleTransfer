@@ -26,17 +26,21 @@ def make_style_encoder(seq_length:int, n_feat:int, vector_output_shape:int)  -> 
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
 
-    x = tf.keras.layers.Conv1D(128, 5, 1, padding='same')(x)
+    x = tf.keras.layers.Conv1D(64, 5, 1, padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.LeakyReLU()(x)
+####
+    x = tf.keras.layers.Conv1D(128, 5, 2, padding='same')(x)
     x = tf.keras.layers.BatchNormalization()(x)
     x = tf.keras.layers.LeakyReLU()(x)
 
-    # x = tf.keras.layers.Conv1D(128, 5, 1, padding='same')(x)
-    # # x = tf.keras.layers.BatchNormalization()(x)
-    # x = tf.keras.layers.LeakyReLU()(x)
+    x = tf.keras.layers.Conv1D(128, 5, 1, padding='same')(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.LeakyReLU()(x)
 ####
 
     x = tf.keras.layers.Flatten()(x)
-    x = tf.keras.layers.Dense(128)(x)
+    x = tf.keras.layers.Dense(32)(x)
     x = tf.keras.layers.LeakyReLU()(x)
     x = tf.keras.layers.Dense(vector_output_shape)(x)
     

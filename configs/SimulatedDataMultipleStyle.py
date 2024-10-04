@@ -35,7 +35,7 @@ class Proposed:
     discrinator_step = 1
 
     ##### Generator loss parameters.
-    l_reconstr = 2
+    l_reconstr = 0
     l_local =  1.5#.2
     l_global = 1.5
     l_style_preservation = 1.
@@ -49,9 +49,6 @@ class Proposed:
     l_triplet = 1.5
     triplet_r = 0.01
     
-    
-    
-
     # Train the generator or the discriminator based on the 
     # Performance of the Discriminator (Here the accuracy.)
     discriminator_success_threashold = 0.70

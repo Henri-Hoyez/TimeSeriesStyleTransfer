@@ -18,8 +18,6 @@ def optimized_cov(a,v):
 def mean_difference(a,v):
     return np.nanmean(a) - np.nanmean(v)
 
-     
-
 def optimized_windowed_cov(a, v, beta=Metric.mean_senssibility_factor):
     if a.shape[1] > v.shape[1]:
         _a, _v = v, a 

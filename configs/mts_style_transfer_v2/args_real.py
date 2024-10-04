@@ -11,11 +11,10 @@ class DafaultArguments():
             "data/PAMAP2/subject106.h5",
             "data/PAMAP2/subject108.h5"
         ]
+        
         self.simulated_arguments = PAMAP2()
 
         self.tensorboard_root_folder = "logs"
         self.default_root_save_folder = "to_evaluate"
         self.experiment_folder = "exp_folder"
         self.exp_name = "MTS-ST V2 TS Real Data powered"
-
-        
