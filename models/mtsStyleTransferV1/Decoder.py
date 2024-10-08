@@ -42,11 +42,11 @@ def upsampling_block(content_input:keras.layers.Layer, style_input:tf.keras.laye
 
 def generator_part(content_input, style_input):
 
-    x = upsampling_block(content_input, style_input, 64) # 16
+    x = upsampling_block(content_input, style_input, 16) # 16
 
-    x = upsampling_block(x, style_input, 64) # 32
+    x = upsampling_block(x, style_input, 32) # 32
     
-    x = upsampling_block(x, style_input, 32)  # 64
+    x = upsampling_block(x, style_input, 64)  # 64
     
     # x = upsampling_block(x, style_input, 32)  # 128
     

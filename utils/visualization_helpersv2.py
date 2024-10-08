@@ -272,7 +272,7 @@ def plot_multistyle_sequences(
             color=colors[2*i+ 1]
             )
         
-        draw_content_space(ax_content, gen_content_space[i], color=colors[i+1], label=f"Content of Gen Style {i+1}", arrow_width=.0005*diag) 
+        draw_content_space(ax_content, gen_content_space[i], color=colors[2*i+1], label=f"Content of Gen Style {i+1}", arrow_width=.0005*diag) 
     
     ax_style.legend()  
     ax_content.legend()
