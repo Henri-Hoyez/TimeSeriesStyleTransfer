@@ -47,11 +47,11 @@ class Proposed:
     ##### Style Encoder
     l_disentanglement = 1.5
     l_triplet = 1.5
-    triplet_r = 0.01
+    triplet_r = 0.00
     
     # Train the generator or the discriminator based on the 
     # Performance of the Discriminator (Here the accuracy.)
-    discriminator_success_threashold = 0.70
+    discriminator_success_threashold = 0.75
     alpha = 0.01
     normal_training_epochs = 0
 

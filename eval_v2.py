@@ -248,7 +248,7 @@ def compute_metrics(dset_real, dset_fake, style_names, model_folder: str):
     return df_noises, df_ampl, df_time_shift
 
 
-def plot_metric(df_metric:pd.DataFrame, title, save_to):
+def plot_metric(df_metric:pd.DataFrame, title, y_min, y_max, save_to):
     plt.figure(figsize=(18, 10))
     ax = plt.subplot(111)
     
@@ -258,6 +258,8 @@ def plot_metric(df_metric:pd.DataFrame, title, save_to):
     ax.grid(True)
     ax.set_title(title)
     ax.legend()
+    
+    ax.set_ylim(y_min, y_max)
     
     plt.savefig(save_to)
     
@@ -381,20 +383,20 @@ def main():
     
     dsets_real, dsets_fake = generate_real_fake_datasets(training_params, ce, se, de)
     
-    make_generation_plot(dsets_real, dsets_fake, style_names, shell_arguments.model_folder)
+    # make_generation_plot(dsets_real, dsets_fake, style_names, shell_arguments.model_folder)
     
-    tstr_stats = tstr_on_styles(dsets_real, dsets_fake, style_names, shell_arguments.model_folder)
+    # tstr_stats = tstr_on_styles(dsets_real, dsets_fake, style_names, shell_arguments.model_folder)
     
     df_noises, df_ampl, df_time_shift = compute_metrics(dsets_real, dsets_fake, style_names, shell_arguments.model_folder)
     
-    plot_metric(df_ampl, "Amplitude metric comparison", f"{shell_arguments.model_folder}/amplitude_metric_comparison.png")
-    plot_metric(df_noises, "Noise metric comparison", f"{shell_arguments.model_folder}/noise_metric_comparison.png")
-    plot_metric(df_time_shift, "time shift metric comparison", f"{shell_arguments.model_folder}/time shift comparison.png")
+    plot_metric(df_ampl, "Amplitude metric comparison", -0.05, 20.05, f"{shell_arguments.model_folder}/amplitude_metric_comparison.png")
+    plot_metric(df_noises, "Noise metric comparison", -0.05, 2.505, f"{shell_arguments.model_folder}/noise_metric_comparison.png")
+    plot_metric(df_time_shift, "time shift metric comparison", -0.05, 25.05, f"{shell_arguments.model_folder}/time shift comparison.png")
     
-    real_batches, fake_batches = generate_per_style_batch(dsets_real, dsets_fake, style_names)
+    # real_batches, fake_batches = generate_per_style_batch(dsets_real, dsets_fake, style_names)
     
-    dimentionality_reduction_plot(real_batches, fake_batches, style_names, shell_arguments.model_folder, "umap")
-    dimentionality_reduction_plot(real_batches, fake_batches, style_names, shell_arguments.model_folder, "tsne")
+    # dimentionality_reduction_plot(real_batches, fake_batches, style_names, shell_arguments.model_folder, "umap")
+    # dimentionality_reduction_plot(real_batches, fake_batches, style_names, shell_arguments.model_folder, "tsne")
 
 
 if __name__ == '__main__':
