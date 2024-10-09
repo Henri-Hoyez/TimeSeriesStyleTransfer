@@ -4,7 +4,7 @@ os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
 import numpy as np
 
-cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=False)
 error_classif = tf.keras.losses.SparseCategoricalCrossentropy()
 
 def recontruction_loss(true:tf.Tensor, generated:tf.Tensor):

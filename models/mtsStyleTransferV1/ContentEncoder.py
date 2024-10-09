@@ -67,6 +67,7 @@ def make_content_encoder(seq_length:int, n_feat:int, feat_wiener:int):
     
     x = tf.keras.layers.Conv1D(feat_wiener, 5, 1, padding='same', activation="linear")(x)
     
+    x = tf.clip_by_norm(x, 1., -1)
     
     # x = tf.math.l2_normalize(x, -1)
     # x = tf.keras.layers.LayerNormalization()(x)

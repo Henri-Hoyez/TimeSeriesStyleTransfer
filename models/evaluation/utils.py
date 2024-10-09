@@ -91,16 +91,16 @@ def encode_dataset(dset:tf.data.Dataset, content_extractor:tf.keras.Model, args:
     content_space_dataset = dset.map(lambda seq: (content_extractor(seq[:, :, :-1]), seq[:, label_idx, -1]))
     return content_space_dataset
 
-def extract_labels(dset, args) -> tf.data.Dataset:
-    sequence_length = args.simulated_arguments.sequence_lenght_in_sample
+def extract_labels(dset, training_params) -> tf.data.Dataset:
+    sequence_length = training_params['sequence_lenght_in_sample']
     idx = sequence_length//2
 
     return dset.map(lambda seq: (seq[:, :, :-1], seq[:, idx, -1]))
 
-def load_dset(df_path:str, args:dict, drop_labels=False, bs = 64) -> tf.data.Dataset:
-    sequence_length = args.simulated_arguments.sequence_lenght_in_sample
-    gran = args.simulated_arguments.granularity
-    overlap = args.simulated_arguments.overlap
+def load_dset(df_path:str, training_params:dict, drop_labels=False, bs = 64) -> tf.data.Dataset:
+    sequence_length = training_params['sequence_lenght_in_sample']
+    gran = training_params["granularity"]
+    overlap = training_params['overlap']
     
     return dataLoader.loading_wrapper(df_path, sequence_length, gran, overlap, bs, drop_labels=drop_labels)
 
