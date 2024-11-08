@@ -27,6 +27,7 @@ def train_valid_split(df:pd.DataFrame):
     return train_df, valid_df
 
 
+
 def pd2tf(df:pd.DataFrame, sequence_lenght, granularity, overlap, batch_size, shuffle:bool):
     total_seq_len = int(sequence_lenght* granularity)
     shift_between_sequences = int(total_seq_len* overlap)

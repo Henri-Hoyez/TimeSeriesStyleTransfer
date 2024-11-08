@@ -2,6 +2,7 @@ from models.mtsStyleTransferV1 import ContentEncoder, Decoder, GlobalDiscriminat
 from utils.dataLoader import get_batches
 from utils.tensorboard_log import TensorboardLog
 from utils import metric, simple_metric, visualization_helpersv2, MLFlow_utils
+from models.classif_model import ClassifModel
 
 from models import losses
 import numpy as np
@@ -15,7 +16,7 @@ import tensorflow as tf
 from datetime import datetime
 
 class Trainer():
-    def __init__(self, shell_arguments, default_arguments) -> None:
+    def __init__(self, shell_arguments, default_arguments, ) -> None:
         
         self.shell_arguments = shell_arguments
         self.default_arguments = default_arguments
@@ -54,6 +55,9 @@ class Trainer():
         self.decoder = Decoder.make_generator(n_sample_wiener, feat_wiener, style_vector_size ,n_signals)
         self.global_discriminator = GlobalDiscriminator.make_global_discriminator(sequence_length, n_signals, n_styles)
         self.local_discriminator = LocalDiscriminator.create_local_discriminator(n_signals, sequence_length, n_styles)
+        
+        # Prepare the classification metric.
+        self.classif_metric = ClassifModel(shell_arguments.content_dset, shell_arguments.style_datasets, default_arguments)
         
         self.prepare()
         self.prepare_loggers(n_styles)
@@ -138,7 +142,9 @@ class Trainer():
 
             self.training_evaluation(e)
             self.logger.log_train_value("40 - Discriminator Sucess", discr_success, e)            
-            self.logger.log_valid_value("40 - Discriminator Sucess", discr_success_valid, e)            
+            self.logger.log_valid_value("40 - Discriminator Sucess", discr_success_valid, e)     
+            
+            
 
             if e == 0:
                 total_batch_train = i
@@ -196,36 +202,28 @@ class Trainer():
         # print(self.seed_content_train.shape, self.seed_styles_train.shape)
         # print(self.seed_content_valid.shape, self.seed_styles_valid.shape)
         # exit()
-        start = datetime.now()
+        
+        mean_acc = self.classif_metric.evaluate(self.content_encoder, self.style_encoder, self.decoder)
+        
+        self.logger.valid_loggers["00 - Model Classification Acc"](mean_acc)
         
         generation_style_train = np.array([self.generate(self.seed_content_train, style_train) for style_train in self.seed_styles_train])
         generation_style_valid = np.array([self.generate(self.seed_content_valid, style_train) for style_train in self.seed_styles_valid])
-        print()
-        print("Generate Sequence Time Elapsed:", datetime.now()- start)
+
         # self.metric_evaluation(generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid)
         
-        start = datetime.now()
-        self.simple_noise_metric(generation_style_train, generation_style_valid)
-        print()
-        print("Noise metric Time Elapsed:", datetime.now()- start)
-        
-        start = datetime.now()
-        self.simple_amplitude_metric(generation_style_train, generation_style_valid)
-        print()
-        print("Ampl metric Time Elapsed:", datetime.now()- start)
+        self.simple_noise_metric(generation_style_train, generation_style_valid, epoch)
 
-
-        start = datetime.now()
+        self.simple_amplitude_metric(generation_style_train, generation_style_valid, epoch)
 
         plot_buff = self.make_viz()
-        print()
-        print("Make Viz Time Elapsed:", datetime.now()- start)
         
         # Make multistyle visualization. 
         self.multistyle_viz(epoch)
         
         self.logger.log_train(plot_buff, epoch)
         self.logger.log_valid(epoch)
+        
 
     # def metric_evaluation(self, generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid):
     #     metric_s1_train = metric.compute_metric(generation_style1_train, self.seed_styles_train[0], self.default_arguments.simulated_arguments)
@@ -240,13 +238,15 @@ class Trainer():
     #     self.logger.met_corr_style1_valid(metric_s1_valid)
     #     self.logger.met_corr_style2_valid(metric_s2_valid)
 
-    def simple_noise_metric(self, generation_style_train, generation_style_valid):
+    def simple_noise_metric(self, generation_style_train, generation_style_valid, epoch):
+        
+        placeholder = "00 - Noise Similarity Style"
         
         seed_content_trends_train, _ = simple_metric.simple_metric_on_noise(self.seed_content_train)
         seed_content_trends_valid, _ = simple_metric.simple_metric_on_noise(self.seed_content_valid)
         
         for i in range(generation_style_train.shape[0]):
-            noise_key = f"00 - Noise Similarity Style {i+ 1}"
+            noise_key = f"{placeholder} {i+ 1}"
             content_key = f"02 - Content Similarity Style {i+ 1}"
             
             content_gen_train, generated_noise_train = simple_metric.simple_metric_on_noise(generation_style_train[i])
@@ -266,18 +266,32 @@ class Trainer():
             
             self.logger.train_loggers[content_key](content_similarity_train)
             self.logger.valid_loggers[content_key](content_similarity_valid)
+            
+        train_mean_noise = self.logger.get_mean_metric(self.logger.train_loggers, 'Noise')
+        valid_mean_noise = self.logger.get_mean_metric(self.logger.valid_loggers, 'Noise')
+        
+        self.logger.log_train_value(f"{placeholder} Mean", train_mean_noise, epoch)
+        self.logger.log_valid_value(f"{placeholder} Mean", valid_mean_noise, epoch)
     
 
-    def simple_amplitude_metric(self, generation_style_train, generation_style_valid):
+    def simple_amplitude_metric(self, generation_style_train, generation_style_valid, epoch):
+        
+        placeholder = f'01 - Amplitude Similarity Style'
         
         for i in range(generation_style_train.shape[0]):
-            ampli_key = f"01 - Amplitude Similarity Style {i+ 1}"
+            ampli_key = f"{placeholder} {i+ 1}"
             
             ampl_diff_train = simple_metric.simple_amplitude_metric(self.seed_styles_train[i], generation_style_train[i])
             ampl_diff_valid = simple_metric.simple_amplitude_metric(self.seed_styles_valid[i], generation_style_valid[i])
 
             self.logger.train_loggers[ampli_key](ampl_diff_train)
             self.logger.valid_loggers[ampli_key](ampl_diff_valid)
+            
+        train_mean_ampl = self.logger.get_mean_metric(self.logger.train_loggers, 'Amplitude')
+        valid_mean_ampl = self.logger.get_mean_metric(self.logger.valid_loggers, 'Amplitude')
+        
+        self.logger.log_train_value(f'{placeholder} Mean', train_mean_ampl, epoch)
+        self.logger.log_valid_value(f'{placeholder} Mean', valid_mean_ampl, epoch)
             
         
 
@@ -333,7 +347,8 @@ class Trainer():
             "triplet_r":self.default_arguments.simulated_arguments.triplet_r,
             "discriminator_success_threashold":self.default_arguments.simulated_arguments.discriminator_success_threashold,
             "alpha":self.default_arguments.simulated_arguments.alpha,
-            "normal_training_epochs":self.default_arguments.simulated_arguments.normal_training_epochs
+            "normal_training_epochs":self.default_arguments.simulated_arguments.normal_training_epochs,
+            "note":self.default_arguments.note
         }
 
         MLFlow_utils.save_configuration(f"{root}/model_config.json", parameters)
@@ -363,6 +378,9 @@ class Trainer():
             
             
         metric_keys = [
+            
+            
+            "00 - Model Classification Acc",
             "10 - Total Generator Loss", 
             "11 - Reconstruction from Content",
             "12 - Central Realness",
@@ -394,16 +412,12 @@ class Trainer():
         
         self.logger = TensorboardLog(self.shell_arguments, metric_keys)
 
-        
-
-
     def prepare(self):
-        
-        self.opt_content_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
-        self.opt_style_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
-        self.opt_decoder = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
-        self.local_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.0005)
-        self.global_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.0005) 
+        self.opt_content_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005
+        self.opt_style_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005
+        self.opt_decoder = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005
+        self.local_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005
+        self.global_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005 
 
     def instanciate_datasets(self, 
                              content_dset_train:tf.data.Dataset, 

@@ -10,18 +10,19 @@ class Proposed:
     sequence_lenght_in_sample = 64
     granularity = 1
     overlap= 0.05
-    epochs = 40
+    epochs = 100
 
     n_feature = 7
+    n_classes = 5
     seq_shape = (sequence_lenght_in_sample, n_feature)
-    batch_size = 64
+    batch_size = 128
 
     train_split = 0.7
     test_split  = 0.3
     valid_split = 0.2 
 
     reduce_train_set = False
-    valid_set_batch_size= 50
+    valid_set_batch_size= 128
 
     # loss Parameters:
     n_styles = 2

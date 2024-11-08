@@ -36,6 +36,11 @@ def upsampling_block(content_input:keras.layers.Layer, style_input:tf.keras.laye
     adapted_style_input = linear_projection(style_input, actual_sequence_len)
     x = AdaIN()(x, adapted_style_input)
     x = tf.keras.layers.LeakyReLU()(x)  
+    
+    # x = tf.keras.layers.Conv1D(filters, 5, 1, padding='same')(x)
+    # adapted_style_input = linear_projection(style_input, actual_sequence_len)
+    # x = AdaIN()(x, adapted_style_input)
+    # x = tf.keras.layers.LeakyReLU()(x)  
 
     return x
 

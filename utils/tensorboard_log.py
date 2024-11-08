@@ -38,15 +38,27 @@ class TensorboardLog():
                 tf.summary.scalar(key, value.result(), step=epoch)
 
             tf.summary.image("Training Generations", image, step=epoch)
+            
+    def get_mean_metric(self, dict, key):
+        values = []
+
+        for c in dict.keys():
+            if key in c:
+                values.append(dict[c].result())
+
+        return np.mean(values)     
+
 
     def log_valid(self, epoch):
         with self.valid_summary_writer.as_default():
             for key, value in self.valid_loggers.items():
                 tf.summary.scalar(key, value.result(), step=epoch)
 
+
     def log_train_value(self, key, value, step):
         with self.train_summary_writer.as_default():
             tf.summary.scalar(key, value, step=step)
+
 
     def log_valid_value(self, key, value, step):
         with self.valid_summary_writer.as_default():

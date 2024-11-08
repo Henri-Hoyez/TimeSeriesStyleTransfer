@@ -11,7 +11,7 @@ from utils import dataLoader, simple_metric, eval_methods
 import numpy as np
 import json
 from models.evaluation import eval_classifiers
-
+import tensorflow_addons as tfa
 
 def parse_arguments():
     default_args = args()
@@ -34,6 +34,12 @@ def parse_arguments():
     return arguments
 
 def load_models(root_folder:str):
+    
+    ccustom_objects = {
+        'AdaIN':AdaIN,
+        'Addons>SpectralNormalization':tfa.layers.SpectralNormalization
+    }
+    
     content_encoder = tf.keras.models.load_model(f"{root_folder}/content_encoder.h5", custom_objects={'AdaIN':AdaIN})
     style_encoder = tf.keras.models.load_model(f"{root_folder}/style_encoder.h5", custom_objects={'AdaIN':AdaIN})
     decoder = tf.keras.models.load_model(f"{root_folder}/decoder.h5", custom_objects={'AdaIN':AdaIN})
@@ -184,11 +190,18 @@ def get_model_training_arguments(root_folder):
     with open(f"{root_folder}/model_config.json") as json_file:
         arguments = json.load(json_file)
     return arguments
+
+def get_name(path:str):
+    filename = path.split("/")[-1]
+    return ".".join(filename.split('.')[:-1])
+
+def get_path(path:str):
+    return "/".join(path.split("/")[:-1])
     
 def classification_on_style_space(dataset_path:str, style_encoder:tf.keras.Model, default_args:dict):
     style_vector_size = default_args.simulated_arguments.style_vector_size
     n_labels = 5
-    epochs = 1
+    epochs = 15
 
     dset_train, dset_valid = load_dset(dataset_path, default_args)
 

@@ -3,6 +3,9 @@
 import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 # os.environ["TF_USE_LEGACY_KERAS"]="1"
+
+# os.environ["CUDA_VISIBLE_DEVICES"]="-1"
+
 import tensorflow as tf
 import argparse
 import numpy as np
@@ -18,7 +21,12 @@ from algorithms.mts_style_transferv2 import Trainer
 
 import matplotlib.pyplot as plt
 
+from models.classif_model import ClassifModel
+
 gpus = tf.config.list_physical_devices('GPU')
+
+# print(gpus)
+# exit()
 gpu_memory_grow(gpus)
 
 def parse_arguments():
@@ -91,16 +99,14 @@ def get_seed_visualization_content_sequences(content_path:str, sequence_len:int)
         indexes = df_part.index
         
         start_index = indexes[0]
-        end_index= indexes[sequence_len]
+        end_index= start_index+ sequence_len
 
-        content_sequence = df_part.loc[start_index: end_index-1].values[:, :-1]
+        content_sequence = _df_valid.loc[start_index: end_index-1].values[:, :-1]
         content_sequences.append(content_sequence)
-
         
         # plt.figure(figsize=(18, 10))
         # plt.plot(content_sequence)
         # plt.savefig(f"{l}.png")
-        
         
     return content_sequences
     
@@ -119,6 +125,8 @@ def main():
     ###
     
     content_viz_sequences = get_seed_visualization_content_sequences(shell_arguments.content_dset, sequence_length)
+    
+    # exit()
         
     content_dset_train, content_dset_valid = dataLoader.loading_wrapper(
         shell_arguments.content_dset,

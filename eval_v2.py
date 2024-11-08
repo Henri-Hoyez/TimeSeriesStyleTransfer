@@ -103,55 +103,100 @@ def tstr(
     save_to:str):
 
     print('[+] Train Real, Test Real.')
-    real_performances, hist_real = eval_methods.train_naive_discriminator(dset_train_real, dset_valid_real, args(), epochs=5, n_classes=5)
+    trtr_perfs, trtr_hist = eval_methods.train_naive_discriminator(dset_train_real, dset_valid_real, args(), epochs=50, n_classes=5)
 
     print("[+] Train Synthetic, Test Synthetic")
-    gen_perf1, hist_fake1 = eval_methods.train_naive_discriminator(dset_train_fake, dset_valid_fake, args(), epochs=5, n_classes=5)
+    _, tsts_hist = eval_methods.train_naive_discriminator(dset_train_fake, dset_valid_fake, args(), epochs=50, n_classes=5)
     
     print("[+] Train Synthetic, Test Real")
-    gen_perf2, hist_fake2 = eval_methods.train_naive_discriminator(dset_train_fake, dset_valid_real, args(), epochs=5, n_classes=5)
+    tstr_perfs, tstr_hist = eval_methods.train_naive_discriminator(dset_train_fake, dset_valid_real, args(), epochs=50, n_classes=5)
     
+    print("[+] Train Real, Test Synthetic")
+    _, trts_hist = eval_methods.train_naive_discriminator(dset_train_real, dset_valid_fake, args(), epochs=50, n_classes=5)
     
     fig = plt.figure(figsize=(18, 10))
     
-    ax = plt.subplot(211)
+    ax = plt.subplot(421)
+    ax.set_title("Train Real Test Real loss")
     
-    plt.plot(hist_real.history["loss"], ".-", label='Train Real Test Real (Train)')
-    plt.plot(hist_real.history["val_loss"], ".-", label='Train Real Test Real (Valid)')
-    
-    plt.plot(hist_fake1.history["loss"], ".-", label='Train Synthetic, Test Synthetic (Train)')
-    plt.plot(hist_fake1.history["val_loss"], ".-", label='Train Synthetic, Test Synthetic (Valid)')
-    
-    plt.plot(hist_fake2.history["loss"], ".-", label='Train Real, Test Synthetic (Train)')
-    plt.plot(hist_fake2.history["val_loss"], ".-", label='Train Real, Test Synthetic (Valid)')
-    
-    ax.legend()
-    ax.grid()
-    ax = plt.subplot(212)
-    
-    plt.plot(hist_real.history["sparse_categorical_accuracy"], ".-", label='Classification Acc on Real (Train)')
-    plt.plot(hist_real.history["val_sparse_categorical_accuracy"], ".-", label='Classification Acc on Real (Valid)')
-    
-    plt.plot(hist_fake1.history["sparse_categorical_accuracy"], ".-", label='Train Synthetic, Test Synthetic (Train)')
-    plt.plot(hist_fake1.history["val_sparse_categorical_accuracy"], ".-", label='Train Synthetic, Test Synthetic (Valid)')
-    
-    plt.plot(hist_fake2.history["sparse_categorical_accuracy"], ".-", label='Train Real, Test Synthetic (Train)')
-    plt.plot(hist_fake2.history["val_sparse_categorical_accuracy"], ".-", label='Train Real, Test Synthetic (Valid)')
-    
+    plt.plot(trtr_hist.history["loss"], ".-", label='Train')
+    plt.plot(trtr_hist.history["val_loss"], ".-", label='Valid')
     ax.grid()
     ax.legend()
+    
+    ax = plt.subplot(422)
+    ax.set_title("Train Real Test Real accuracy")
+    
+    plt.plot(trtr_hist.history["sparse_categorical_accuracy"], ".-", label='Train')
+    plt.plot(trtr_hist.history["val_sparse_categorical_accuracy"], ".-", label='Valid')
+    ax.grid()
+    ax.legend()
+    
+    #######
+    ax = plt.subplot(423)
+    ax.set_title("Train Real, Test Synthetic loss")
+    
+    plt.plot(trts_hist.history["loss"], ".-", label='Train Real, Test Synthetic (Train)')
+    plt.plot(trts_hist.history["val_loss"], ".-", label='Train Real, Test Synthetic (Valid)')
+    
+    ax.grid()
+    ax.legend()
+
+    ax = plt.subplot(424)
+    ax.set_title("Train Real, Test Synthetic accuracy")
+    
+    plt.plot(trts_hist.history["sparse_categorical_accuracy"], ".-", label='Train Real, Test Synthetic (Train)')
+    plt.plot(trts_hist.history["val_sparse_categorical_accuracy"], ".-", label='Train Real, Test Synthetic (Valid)')
+    
+    ax.grid()
+    ax.legend()
+    #######
+    
+    ax = plt.subplot(425)
+    ax.set_title("Train Synthetic, Test Synthetic loss")
+    
+    plt.plot(tsts_hist.history["loss"], ".-", label='Train')
+    plt.plot(tsts_hist.history["val_loss"], ".-", label='Valid')
+    ax.grid()
+    ax.legend()
+    
+    ax = plt.subplot(426)
+    ax.set_title("Train Synthetic, Test Synthetic accuracy")
+    
+    plt.plot(tsts_hist.history["sparse_categorical_accuracy"], ".-", label='Train')
+    plt.plot(tsts_hist.history["val_sparse_categorical_accuracy"], ".-", label='Valid')
+    ax.grid()
+    ax.legend()
+    #######
+    
+    ax = plt.subplot(427)
+    ax.set_title("Train Synthetic, Test Real loss")
+    
+    plt.plot(tstr_hist.history["loss"], ".-", label='Train')
+    plt.plot(tstr_hist.history["val_loss"], ".-", label='Valid')
+    ax.grid()
+    ax.legend()
+    
+    ax = plt.subplot(428)
+    ax.set_title("Train Synthetic, Test Real accuracy")
+    
+    plt.plot(tstr_hist.history["sparse_categorical_accuracy"], ".-", label='Train')
+    plt.plot(tstr_hist.history["val_sparse_categorical_accuracy"], ".-", label='Valid')
+    ax.grid()
+    ax.legend()
+    #######
     
     plt.savefig(save_to)
     
     plt.close(fig)
     
-    return real_performances, gen_perf2
+    return trtr_perfs, tstr_perfs
 
 
 def tstr_on_styles(real_dataset, fake_dataset, style_names, model_folder):
     tstr_stats = {}
 
-    for i, style_ in enumerate(style_names):
+    for _, style_ in enumerate(style_names):
         print(f'[+] Training on dataset {style_}.')
         
         perf_on_real, perf_on_fake = tstr(
@@ -241,9 +286,13 @@ def compute_metrics(dset_real, dset_fake, style_names, model_folder: str):
     df_ampl = pd.DataFrame(data=mean_ampl, index=style_names, columns=['Real', 'Fake'])
     df_time_shift = pd.DataFrame(data=mean_time_shift, index=style_names, columns=['Real', 'Fake'])
     
-    df_noises.to_hdf(f'{model_folder}/noise_metric.h5', key='data')
-    df_ampl.to_hdf(f'{model_folder}/ampl_metric.h5', key='data')
-    df_time_shift.to_hdf(f'{model_folder}/time_shift_metric.h5', key='data')
+    # df_noises.to_hdf(f'{model_folder}/noise_metric.h5', key='data')
+    # df_ampl.to_hdf(f'{model_folder}/ampl_metric.h5', key='data')
+    # df_time_shift.to_hdf(f'{model_folder}/time_shift_metric.h5', key='data')
+    
+    df_noises.to_excel(f'{model_folder}/noise_metric.xlsx')
+    df_ampl.to_excel(f'{model_folder}/ampl_metric.xlsx')
+    df_time_shift.to_excel(f'{model_folder}/time_shift_metric.xlsx')
     
     return df_noises, df_ampl, df_time_shift
 
@@ -307,8 +356,8 @@ def generate_per_style_batch(dset_real, dset_fake, style_names):
     fake_batches = []
 
     for _, style_ in enumerate(style_names):
-        real_style_batch = get_batches(dset_real[f"{style_}_valid"], 10)
-        fake_style_batch = get_batches(dset_fake[f"{style_}_valid"], 10)
+        real_style_batch = get_batches(dset_real[f"{style_}_valid"], 5)
+        fake_style_batch = get_batches(dset_fake[f"{style_}_valid"], 5)
         
         real_batches.append(real_style_batch)
         fake_batches.append(fake_style_batch)
@@ -324,7 +373,6 @@ def dimentionality_reduction_plot(real_batches, fake_batches, style_names, model
     else: 
         raise Exception("No Dimentionality reduction algorthm selected.")
         
-    
     n_styles = len(style_names)
 
     (n_styles, bs, seq_len, n_sigs) = real_batches.shape
@@ -371,32 +419,44 @@ def make_generation_plot(real_dataset, fake_dataset, style_names, model_folder):
         
     plt.tight_layout()
     plt.savefig(f"{model_folder}/generations.png")
+    
+
+
+
+
 
 
 def main():
     shell_arguments = parse_arguments()
+    model_folder = shell_arguments.model_folder
     
-    training_params = utils.get_model_training_arguments(shell_arguments.model_folder)
-    ce, se, de = utils.load_models(shell_arguments.model_folder)
+    training_params = utils.get_model_training_arguments(model_folder)
+    ce, se, de = utils.load_models(model_folder)
+    
+    # Save model architecture in the folder to have a look.
+    tf.keras.utils.plot_model(ce, f"{model_folder}/content_encoder.png", show_shapes=True)
+    tf.keras.utils.plot_model(se, f"{model_folder}/style_encoder.png", show_shapes=True)
+    tf.keras.utils.plot_model(de, f"{model_folder}/decoder.png", show_shapes=True)
     
     style_names = [get_name(p) for p in training_params["style_datasets"]]
     
     dsets_real, dsets_fake = generate_real_fake_datasets(training_params, ce, se, de)
     
-    # make_generation_plot(dsets_real, dsets_fake, style_names, shell_arguments.model_folder)
+    make_generation_plot(dsets_real, dsets_fake, style_names, model_folder)
     
-    # tstr_stats = tstr_on_styles(dsets_real, dsets_fake, style_names, shell_arguments.model_folder)
+    df_noises, df_ampl, df_time_shift = compute_metrics(dsets_real, dsets_fake, style_names, model_folder)
     
-    df_noises, df_ampl, df_time_shift = compute_metrics(dsets_real, dsets_fake, style_names, shell_arguments.model_folder)
+    plot_metric(df_ampl, "Amplitude metric comparison", -0.05, 20.05, f"{model_folder}/amplitude_metric_comparison.png")
+    plot_metric(df_noises, "Noise metric comparison", -0.05, 2.505, f"{model_folder}/noise_metric_comparison.png")
+    plot_metric(df_time_shift, "time shift metric comparison", -0.05, 25.05, f"{model_folder}/time shift comparison.png")
     
-    plot_metric(df_ampl, "Amplitude metric comparison", -0.05, 20.05, f"{shell_arguments.model_folder}/amplitude_metric_comparison.png")
-    plot_metric(df_noises, "Noise metric comparison", -0.05, 2.505, f"{shell_arguments.model_folder}/noise_metric_comparison.png")
-    plot_metric(df_time_shift, "time shift metric comparison", -0.05, 25.05, f"{shell_arguments.model_folder}/time shift comparison.png")
+    real_batches, fake_batches = generate_per_style_batch(dsets_real, dsets_fake, style_names)
     
-    # real_batches, fake_batches = generate_per_style_batch(dsets_real, dsets_fake, style_names)
+    dimentionality_reduction_plot(real_batches, fake_batches, style_names, model_folder, "umap")
+    dimentionality_reduction_plot(real_batches, fake_batches, style_names, model_folder, "tsne")
     
-    # dimentionality_reduction_plot(real_batches, fake_batches, style_names, shell_arguments.model_folder, "umap")
-    # dimentionality_reduction_plot(real_batches, fake_batches, style_names, shell_arguments.model_folder, "tsne")
+    tstr_stats = tstr_on_styles(dsets_real, dsets_fake, style_names, model_folder)
+    
 
 
 if __name__ == '__main__':
