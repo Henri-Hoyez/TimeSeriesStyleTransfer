@@ -13,6 +13,8 @@ class ClassifModel():
     def __init__(self, real_content_dset:str, real_style_dataset_path:list, standard_args:dict, epochs=10):
         
         classification_model_folder = "classification_models"
+        
+        os.makedirs(classification_model_folder, exist_ok=True)
     
         sequence_length = standard_args.simulated_arguments.sequence_lenght_in_sample
         gran = standard_args.simulated_arguments.granularity

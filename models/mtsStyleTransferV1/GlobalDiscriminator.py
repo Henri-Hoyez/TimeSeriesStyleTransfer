@@ -3,6 +3,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
 
+test = tf.keras.layers.Dense(100)
+
 import tensorflow_addons as tfa
 
 def make_global_discriminator(seq_length:int, n_signals:int, n_classes:int):

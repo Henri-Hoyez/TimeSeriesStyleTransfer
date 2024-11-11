@@ -10,7 +10,6 @@ import tensorflow as tf
 import argparse
 import numpy as np
 
-test = tf.keras.layers.Dense(100)
 
 from utils.gpu_memory_grow import gpu_memory_grow
 # from configs.mts_style_transfer_v2.args import DafaultArguments as args
