@@ -19,17 +19,17 @@ class DafaultArguments():
         #     ]
         
         self.style_datasets_path = [
-            "data/simulated_dataset/amplitude_shift/1.0_1.0_scaled.h5",
-            "data/simulated_dataset/amplitude_shift/2.0_2.0_scaled.h5",
-            "data/simulated_dataset/amplitude_shift/3.0_3.0_scaled.h5",
-            "data/simulated_dataset/amplitude_shift/4.0_4.0_scaled.h5",
-            "data/simulated_dataset/amplitude_shift/5.0_5.0_scaled.h5",
-            "data/simulated_dataset/amplitude_shift/6.0_6.0_scaled.h5",
-            "data/simulated_dataset/amplitude_shift/7.0_7.0_scaled.h5" ,
-            "data/simulated_dataset/amplitude_shift/8.0_8.0_scaled.h5" ,
-            "data/simulated_dataset/amplitude_shift/9.0_9.0_scaled.h5" ,
-            "data/simulated_dataset/amplitude_shift/10.0_10.0_scaled.h5",
-            ]
+            "data/simulated_dataset/amplitude_shift/1.0_1.0_standardized.h5",
+            "data/simulated_dataset/amplitude_shift/2.0_2.0_standardized.h5",
+            "data/simulated_dataset/amplitude_shift/3.0_3.0_standardized.h5",
+            "data/simulated_dataset/amplitude_shift/4.0_4.0_standardized.h5",
+            "data/simulated_dataset/amplitude_shift/5.0_5.0_standardized.h5",
+            "data/simulated_dataset/amplitude_shift/6.0_6.0_standardized.h5",
+            "data/simulated_dataset/amplitude_shift/7.0_7.0_standardized.h5" ,
+            "data/simulated_dataset/amplitude_shift/8.0_8.0_standardized.h5" ,
+            "data/simulated_dataset/amplitude_shift/9.0_9.0_standardized.h5" ,
+            "data/simulated_dataset/amplitude_shift/10.0_10.0_standardized.h5",
+        ]
         
         # self.style_datasets_path = [
         #     "data/simulated_dataset/output_noise/0.25.h5",
@@ -61,8 +61,8 @@ class DafaultArguments():
 
         self.tensorboard_root_folder = "logs"
         self.default_root_save_folder = "to_evaluate"
-        self.experiment_folder = "exp_folder"
-        self.exp_name = "Baseline + Spectral Normalization on both Ds + bigger class D + smaller BS"
-        self.note = ""
+        self.experiment_folder = "page_blanche"
+        self.exp_name = "Baseline"
+        self.note = "Données standardizée, modèles plus petit."
         
         
