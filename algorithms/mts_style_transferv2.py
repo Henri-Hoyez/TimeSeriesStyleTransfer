@@ -62,7 +62,7 @@ class Trainer():
         self.prepare()
         self.prepare_loggers(n_styles)
         self.plot_models()
-        exit()
+        # exit()
 
 
     def plot_models(self):
