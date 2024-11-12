@@ -5,8 +5,13 @@ import os
 # os.environ["TF_USE_LEGACY_KERAS"]="1"
 
 # os.environ["CUDA_VISIBLE_DEVICES"]="-1"
-
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
+
+import logging
+logger = tf.get_logger()
+logger.setLevel(logging.ERROR) # or logging.INFO, logging.WARNING, etc.
+
 import argparse
 import numpy as np
 
