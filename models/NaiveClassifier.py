@@ -1,6 +1,7 @@
 import tensorflow as tf
+from tensorflow.python.keras.models import Model
 
-def make_naive_discriminator(seq_shape:tuple, n_classes:int)-> tf.keras.models.Model:
+def make_naive_discriminator(seq_shape:tuple, n_classes:int)-> Model:
     # initializer = tf.keras.initializers.GlorotNormal()
 
     model = tf.keras.Sequential()

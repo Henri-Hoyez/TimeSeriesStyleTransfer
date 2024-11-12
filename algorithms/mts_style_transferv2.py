@@ -4,9 +4,13 @@ from utils.tensorboard_log import TensorboardLog
 from utils import metric, simple_metric, visualization_helpersv2, MLFlow_utils
 from models.classif_model import ClassifModel
 
+
 from models import losses
 import numpy as np
 from sklearn.decomposition import PCA
+
+from tensorflow.python.keras.metrics import BinaryAccuracy, binary_accuracy
+from tensorflow.python.keras.optimizers import rmsprop_v2 as RMSprop
 
 
 import os
@@ -44,11 +48,11 @@ class Trainer():
         self.discr_success_th = self.default_arguments.simulated_arguments.discriminator_success_threashold
         self.normal_training_epochs = self.default_arguments.simulated_arguments.normal_training_epochs
 
-        self.global_discr_acc_train = tf.keras.metrics.BinaryAccuracy()
-        self.global_discr_acc_valid = tf.keras.metrics.BinaryAccuracy()
+        self.global_discr_acc_train = BinaryAccuracy()
+        self.global_discr_acc_valid = BinaryAccuracy()
 
-        self.local_discr_acc_train = tf.keras.metrics.BinaryAccuracy()
-        self.local_discr_acc_valid = tf.keras.metrics.BinaryAccuracy()
+        self.local_discr_acc_train = BinaryAccuracy()
+        self.local_discr_acc_valid = BinaryAccuracy()
 
         self.content_encoder = ContentEncoder.make_content_encoder(sequence_length, n_signals, feat_wiener)
         self.style_encoder = StyleEncoder.make_style_encoder(sequence_length, n_signals, style_vector_size)
@@ -57,11 +61,11 @@ class Trainer():
         self.local_discriminator = LocalDiscriminator.create_local_discriminator(n_signals, sequence_length, n_styles)
         
         # Prepare the classification metric.
-        self.classif_metric = ClassifModel(shell_arguments.content_dset, shell_arguments.style_datasets, default_arguments)
+        # self.classif_metric = ClassifModel(shell_arguments.content_dset, shell_arguments.style_datasets, default_arguments)
         
         self.prepare()
         self.prepare_loggers(n_styles)
-        self.plot_models()
+        # self.plot_models()
         # exit()
 
 
@@ -413,11 +417,11 @@ class Trainer():
         self.logger = TensorboardLog(self.shell_arguments, metric_keys)
 
     def prepare(self):
-        self.opt_content_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005
-        self.opt_style_encoder = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005
-        self.opt_decoder = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005
-        self.local_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005
-        self.global_discriminator_opt = tf.keras.optimizers.RMSprop(learning_rate=0.001) # 0.0005 
+        self.opt_content_encoder = RMSprop.RMSprop(learning_rate=0.001) # 0.0005
+        self.opt_style_encoder = RMSprop.RMSprop(learning_rate=0.001) # 0.0005
+        self.opt_decoder = RMSprop.RMSprop(learning_rate=0.001) # 0.0005
+        self.local_discriminator_opt = RMSprop.RMSprop(learning_rate=0.001) # 0.0005
+        self.global_discriminator_opt = RMSprop.RMSprop(learning_rate=0.001) # 0.0005 
 
     def instanciate_datasets(self, 
                              content_dset_train:tf.data.Dataset, 
@@ -484,8 +488,8 @@ class Trainer():
         # Thie accuracy will define if the generator has to be trained or the discriminator.
 
         global_accs = tf.reduce_mean([
-            tf.keras.metrics.binary_accuracy(real_labels, g_crit_real),
-            tf.keras.metrics.binary_accuracy(generation_labels, g_crit_fake)
+            binary_accuracy(real_labels, g_crit_real),
+            binary_accuracy(generation_labels, g_crit_fake)
         ])
 
         channel_accs = tf.reduce_mean([
@@ -710,8 +714,8 @@ class Trainer():
         # Compute Accuracy for the GAN Training.
         # Thie accuracy will define if the generator has to be trained or the discriminator.
         global_accs = tf.reduce_mean([
-            tf.keras.metrics.binary_accuracy(real_labels, g_crit_real),
-            tf.keras.metrics.binary_accuracy(generation_labels, g_crit_fake)
+            binary_accuracy(real_labels, g_crit_real),
+            binary_accuracy(generation_labels, g_crit_fake)
         ])
 
         channel_accs = tf.reduce_mean([

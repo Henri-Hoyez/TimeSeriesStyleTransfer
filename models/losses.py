@@ -4,8 +4,12 @@ os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
 import numpy as np
 
-cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=False)
-error_classif = tf.keras.losses.SparseCategoricalCrossentropy()
+from tensorflow.python.keras.losses import BinaryCrossentropy, SparseCategoricalCrossentropy
+from tensorflow.python.keras.metrics import binary_accuracy
+
+
+cross_entropy = BinaryCrossentropy(from_logits=False)
+error_classif = SparseCategoricalCrossentropy()
 
 def recontruction_loss(true:tf.Tensor, generated:tf.Tensor):
     diff = generated- true
@@ -56,7 +60,7 @@ def local_discriminator_accuracy(y_true, y_preds):
 
     accs = []
     for y_pred in y_preds:
-        accs.append(tf.keras.metrics.binary_accuracy(y_true, y_pred))
+        accs.append(binary_accuracy(y_true, y_pred))
 
     return tf.reduce_mean(accs)
 

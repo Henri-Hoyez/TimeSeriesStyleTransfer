@@ -2,11 +2,10 @@
 # import os
 # os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
-
-
+from tensorflow.python.keras.layers import Layer
 
 # Define AdaIN Layers for Time Series
-class AdaIN(tf.keras.layers.Layer):
+class AdaIN(Layer):
     def __init__(self, *args, **kwargs):
         super(AdaIN, self).__init__(*args, **kwargs)
 

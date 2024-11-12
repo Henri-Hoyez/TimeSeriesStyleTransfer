@@ -9,6 +9,8 @@ import tensorflow as tf
 
 from datetime import datetime
 
+from tensorflow.python.keras.metrics import Mean
+
 
 
 class TensorboardLog():
@@ -75,8 +77,8 @@ class TensorboardLog():
 
     def intanciate_loggers(self, metric_names:list):
         for metric_name in metric_names:
-             self.train_loggers[metric_name] = tf.keras.metrics.Mean(name=metric_name)
-             self.valid_loggers[metric_name] = tf.keras.metrics.Mean(name=metric_name)
+             self.train_loggers[metric_name] = Mean(name=metric_name)
+             self.valid_loggers[metric_name] = Mean(name=metric_name)
 
 
     def print_train(self, epoch, total_epochs, i, total_batch, extra_info:str=""):

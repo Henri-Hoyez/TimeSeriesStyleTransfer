@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
+from tensorflow.python.keras.models import Model
+
 
 
 class ClassifModel():
@@ -91,14 +93,14 @@ class ClassifModel():
         history = model.fit(train_dset, validation_data=valid_dset, epochs=epochs)
         return model, history
     
-    def generate(self, ce:tf.keras.Model, se:tf.keras.Model, de:tf.keras.Model, cont_batch, style_batch):
+    def generate(self, ce:Model, se:Model, de:Model, cont_batch, style_batch):
         content_encodings = ce(cont_batch)
         style_encodings = se(style_batch)
         sequences = de([content_encodings, style_encodings])
         return tf.concat(sequences, -1)
     
     
-    def evaluate(self, content_encoder:tf.keras.Model, style_encoder:tf.keras.Model, decoder:tf.keras.Model):
+    def evaluate(self, content_encoder:Model, style_encoder:Model, decoder:Model):
         print('[+] Classitifation metric.')
         accs = []
         

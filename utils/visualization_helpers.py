@@ -5,8 +5,8 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-os.environ["TF_USE_LEGACY_KERAS"]="1"
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+# os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
 
 config = Proposed()
