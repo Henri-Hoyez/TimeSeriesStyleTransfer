@@ -61,7 +61,7 @@ class Trainer():
         self.local_discriminator = LocalDiscriminator.create_local_discriminator(n_signals, sequence_length, n_styles)
         
         # Prepare the classification metric.
-        # self.classif_metric = ClassifModel(shell_arguments.content_dset, shell_arguments.style_datasets, default_arguments)
+        self.classif_metric = ClassifModel(shell_arguments.content_dset, shell_arguments.style_datasets, default_arguments)
         
         self.prepare()
         self.prepare_loggers(n_styles)

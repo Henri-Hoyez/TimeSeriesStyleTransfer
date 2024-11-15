@@ -11,7 +11,8 @@ from utils import dataLoader, simple_metric, eval_methods
 import numpy as np
 import json
 from models.evaluation import eval_classifiers
-import tensorflow_addons as tfa
+
+from tensorflow.python.keras.models import load_model
 
 def parse_arguments():
     default_args = args()
@@ -35,14 +36,9 @@ def parse_arguments():
 
 def load_models(root_folder:str):
     
-    ccustom_objects = {
-        'AdaIN':AdaIN,
-        'Addons>SpectralNormalization':tfa.layers.SpectralNormalization
-    }
-    
-    content_encoder = tf.keras.models.load_model(f"{root_folder}/content_encoder.h5", custom_objects={'AdaIN':AdaIN})
-    style_encoder = tf.keras.models.load_model(f"{root_folder}/style_encoder.h5", custom_objects={'AdaIN':AdaIN})
-    decoder = tf.keras.models.load_model(f"{root_folder}/decoder.h5", custom_objects={'AdaIN':AdaIN})
+    content_encoder = load_model(f"{root_folder}/content_encoder.h5")
+    decoder = load_model(f"{root_folder}/decoder.h5", custom_objects={'AdaIN':AdaIN})
+    style_encoder = load_model(f"{root_folder}/style_encoder.h5")
 
     return content_encoder, style_encoder, decoder
 

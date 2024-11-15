@@ -8,15 +8,17 @@ import numpy as np
 import os
 
 from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.models import load_model
+from tensorflow.python.keras.metrics import SparseCategoricalAccuracy
 
 
 
 class ClassifModel():
-    def __init__(self, real_content_dset:str, real_style_dataset_path:list, standard_args:dict, epochs=10):
+    def __init__(self, real_content_dset:str, real_style_dataset_path:list, standard_args:dict, epochs=1):
         
-        classification_model_folder = "classification_models"
+        self.classification_model_folder = "classification_models"
         
-        os.makedirs(classification_model_folder, exist_ok=True)
+        os.makedirs(self.classification_model_folder, exist_ok=True)
     
         sequence_length = standard_args.simulated_arguments.sequence_lenght_in_sample
         gran = standard_args.simulated_arguments.granularity
@@ -35,7 +37,7 @@ class ClassifModel():
         for style_path in real_style_dataset_path:
             
             filename = utils.get_name(style_path)
-            model_path = f'{classification_model_folder}/{filename}.h5'
+            model_path = f'{self.classification_model_folder}/{filename}.h5'
             
             dset_train, dset_valid = dataLoader.loading_wrapper(style_path, sequence_length, gran, overlap, bs, drop_labels=False)
             
@@ -49,11 +51,11 @@ class ClassifModel():
             if not os.path.exists(model_path):
                 trained_model, history = self.train(dset_train, dset_valid, epochs, seq_shape, n_classes)
                 trained_model.save(model_path)
-                self.plot_learning_curves(history, f"training_curves_{filename}.png")
+                self.plot_learning_curves(history, f"{self.classification_model_folder}/training_curves/{filename}.png")
                 
             else:
                 print(f"[+] Loading '{model_path}'")
-                trained_model = tf.keras.models.load_model(model_path)
+                trained_model = load_model(model_path)
             
             
             self.models.append(trained_model)
@@ -63,8 +65,6 @@ class ClassifModel():
         return os.path.exists(filepath)
     
     
-    
-            
     def plot_learning_curves(self, history, save_to):
         plt.figure(figsize=(18, 10))    
         
@@ -104,7 +104,7 @@ class ClassifModel():
         print('[+] Classitifation metric.')
         accs = []
         
-        acc_metric = tf.keras.metrics.SparseCategoricalAccuracy()
+        acc_metric = SparseCategoricalAccuracy()
         
         for i in range(len(self.valid_set_styles)):
             
