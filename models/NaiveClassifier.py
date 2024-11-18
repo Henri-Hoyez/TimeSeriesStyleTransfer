@@ -21,37 +21,16 @@ def make_naive_discriminator(seq_shape:tuple, n_classes:int)-> Model:
     model.add(Input(shape=seq_shape))
 
     model.add(Conv1D(filters=128, kernel_size=3, activation='relu', padding="same"))
-    # model.add(BatchNormalization())
     model.add(MaxPool1D(pool_size=2))
 
     model.add(Conv1D(filters=256, kernel_size=3, padding="same", activation='relu'))
-    # model.add(BatchNormalization())
     model.add(MaxPool1D(pool_size=2))
-    # model.add(LeakyReLU())
-    
-    model.add(Conv1D(filters=512, kernel_size=3, padding="same", activation='relu'))
-    # model.add(BatchNormalization())
-    model.add(MaxPool1D(pool_size=2))
-    # model.add(LeakyReLU())
-
-    model.add(Conv1D(filters=512, kernel_size=3, padding="same", activation='relu'))
-    # model.add(BatchNormalization())
-    model.add(MaxPool1D(pool_size=2))
-    # model.add(LeakyReLU())
-
 
     model.add(Flatten())
 
-    # model.add(Dense(units=100, activation='sigmoid'))
-    model.add(Dense(units=100, activation="relu"))
     model.add(Dense(units=50, activation="relu"))
-    # model.add(LeakyReLU())
-    # model.add(Activation("relu"))
-
     
-    # model.add(Dropout(0.5))
     model.add(Dense(units=n_classes, activation="softmax"))
-    # model.add(Dense(units=n_classes))
 
     model.compile(
         optimizer=RMSprop.RMSprop(),
@@ -59,7 +38,5 @@ def make_naive_discriminator(seq_shape:tuple, n_classes:int)-> Model:
         metrics=SparseCategoricalAccuracy()
     )
     
-    # print(model.summary())
-
     return model
 

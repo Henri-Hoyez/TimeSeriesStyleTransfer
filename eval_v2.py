@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import tensorflow as tf
 tf.keras.layers.Dense(100)
 from utils.gpu_memory_grow import gpu_memory_grow
@@ -10,17 +10,26 @@ from utils.gpu_memory_grow import gpu_memory_grow
 import matplotlib.pyplot as plt
 import itertools
 from models.evaluation import utils
-from utils import eval_methods, dataLoader, simple_metric
+from utils import eval_methods, dataLoader, simple_metric, dataLoader
 
 # from configs.mts_style_transfer_v2.args import DafaultArguments as args
 from configs.mts_style_transfer_v2.args_sim import DafaultArguments as args
 # from configs.mts_style_transfer_v2.args_real import DafaultArguments as args
+
+from tensorflow.python.keras.layers import Input, Dense, Conv1D, Flatten
+from tensorflow.python.keras.models import Model
+
+from models.NaiveClassifier import make_naive_discriminator
 
 
 import umap
 from sklearn.manifold import TSNE
 import argparse
 from utils import visualization_helpersv2
+from utils import visualization_helpersv2
+from sklearn.decomposition import PCA
+
+
 
 gpus = tf.config.list_physical_devices('GPU')
 gpu_memory_grow(gpus)
@@ -312,7 +321,6 @@ def plot_metric(df_metric:pd.DataFrame, title, y_min, y_max, save_to):
     
     plt.savefig(save_to)
     
-    
 def multi_umap_plot(real_styles, gen_styles):
     (_, _, seq_len, n_sigs) = real_styles.shape
     
@@ -394,36 +402,236 @@ def dimentionality_reduction_plot(real_batches, fake_batches, style_names, model
     plt.legend()
     plt.savefig(f"{model_folder}/{type}.png")
     plt.show()
-    
-    
-def make_generation_plot(real_dataset, fake_dataset, style_names, model_folder):
-    plt.figure(figsize=(18, 20))
 
-    for i, style_ in enumerate(style_names):
-        real_style_sequence = next(iter(real_dataset[f"{style_}_valid"]))[0][0]
-        fake_style_sequence = next(iter(fake_dataset[f"{style_}_valid"]))[0][0]
+def make_generation_plot(content_sequences, real_style_dset, 
+                         ce, se, de,
+                         style_names, 
+                         model_folder):
+    n_style = len(style_names)
+    
+    fig = plt.figure(figsize=(18, 20))
+    spec= fig.add_gridspec(n_style+ 1, 2)
+
+    for label, content_sequence in enumerate(content_sequences):
         
-        ax = plt.subplot(len(style_names), 2, 2*i+1)
-        ax.set_title(f"Real Style {i+1}")
-        plt.plot(real_style_sequence)
-        ax.grid(True)
-        ax.set_ylim(-0.01, 20.01)
+        # plot the content sequence 
+        ax_cont_sequence = fig.add_subplot(spec[0, :])
+        ax_cont_sequence.set_title(f"Content Sequence label {label}.")
         
-        ax = plt.subplot(len(style_names), 2, 2*i+2)
-        ax.set_title(f"Fake Style {i+1}")
+        ax_cont_sequence.plot(content_sequence)
+        ax_cont_sequence.grid()
         
-        plt.plot(fake_style_sequence)
-        ax.set_ylim(-0.01, 20.01)
+        for i, style_ in enumerate(style_names):
+            real_style_sequence = next(iter(real_style_dset[f"{style_}_valid"]))[0][0]
+            fake_sequence = utils.generate(np.array([content_sequence]), np.array([real_style_sequence]), ce, se, de)
         
-        ax.grid(True)
+            _min, _max = np.min(real_style_sequence), np.max(real_style_sequence)
         
+            ax = fig.add_subplot(spec[i+1, 0])
+            ax.set_title(f"Real Style {i+1}")
+            plt.plot(real_style_sequence)
+            ax.grid(True)
+            ax.set_ylim(_min, _max)
+            
+            ax = fig.add_subplot(spec[i+1, 1])
+            ax.set_title(f"Fake Style {i+1}")
+            
+            plt.plot(fake_sequence[0])
+            ax.set_ylim(_min, _max)
+            
+            ax.grid(True)
+        
+        plt.tight_layout()
+        plt.savefig(f"{model_folder}/{label+ 1}_generations.png")
+
+
+def make_lattent_space_representation(content_sequences, style_datasets, style_names, ce, se, de, model_folder):
+    print("[+] Lattent Spcace Representation.")
+    
+    n_style = len(style_names)
+    cmap = plt.get_cmap("tab20")
+    colors = cmap(np.linspace(0, 1, n_style*2))
+    
+    for label, content_sequence in enumerate(content_sequences):
+        
+        fig = plt.figure(figsize=(18, 10))
+    
+        spec= fig.add_gridspec(2, 2)
+            
+        ax_content = fig.add_subplot(spec[0, :])
+        ax_content_space = fig.add_subplot(spec[1, 0])
+        ax_style_space = fig.add_subplot(spec[1, 1])
+        
+        ax_content.set_title("Content Sequence", fontsize=25)
+        ax_content.plot(content_sequence)
+        
+        ax_content_space.set_title("Content Space", fontsize=25)
+        ax_style_space.set_title("Style Space", fontsize=25)
+        
+        ax_content.grid()
+        ax_content_space.grid()
+        ax_style_space.grid()
+        
+        for i, style_ in enumerate(style_names):
+            real_style_sequences = next(iter(style_datasets[f"{style_}_valid"]))[0]
+            duplicated_contents = np.array([content_sequence]*real_style_sequences.shape[0])
+                                    
+            real_content_path = ce(duplicated_contents)
+            real_style_points = se(real_style_sequences)
+            fake_sequences = de([real_content_path, real_style_points])
+            
+            fake_sequences = tf.concat(fake_sequences, -1)
+                        
+            fake_content_paths = ce(fake_sequences)
+            fake_style_points = se(fake_sequences)
+            
+            visualization_helpersv2.draw_content_space(ax_content_space, fake_content_paths[0], color=colors[2*i+1], label=f"Gen Seq Style {i}.")
+            
+            reducer = PCA(n_components=2)
+            reducer.fit(real_style_points)
+            
+            reduced_real_style_points = reducer.transform(real_style_points)
+            reduced_fake_style_points = reducer.transform(fake_style_points)
+                    
+            ax_style_space.scatter(
+                reduced_real_style_points[:150, 0], 
+                reduced_real_style_points[:150, 1], 
+                label=f'Real Style {i}.', 
+                alpha=0.25, 
+                color=colors[2*i]
+            )
+        
+            ax_style_space.scatter(
+                reduced_fake_style_points[:150, 0], 
+                reduced_fake_style_points[:150, 1], 
+                label=f'Gen Style {i}.', 
+                alpha=0.25, 
+                color=colors[2*i+ 1]
+            )
+        
+        visualization_helpersv2.draw_content_space(ax_content_space, real_content_path[0], color=colors[0], label=f'Real content sequence')
+        ax_content_space.legend(bbox_to_anchor=(-.1, 1.038), loc='upper right')
+        ax_style_space.legend(bbox_to_anchor=(1.0, 1.038), loc='upper left')
+        
+        plt.tight_layout()
+        
+        filepath = f"{model_folder}/lattent_viz_{label+1}.png"
+        plt.savefig(filepath)
+        
+        print(f"[+] Saved in {filepath}.")    
+      
+
+
+
+def plot_classif_metric(histories, save_to:str):
+    fig = plt.figure(figsize=(18, 10))
+    
+    loss_axis = plt.subplot(211)
+    loss_axis.set_title("Training losses")
+    
+    acc_axis = plt.subplot(212)
+    acc_axis.set_title("Training accuracies")
+    
+    
+    for key, value in histories.items():
+        loss_axis.plot(value.history["loss"], ".-", label=f"{key}")
+        
+        acc_axis.plot(value.history["accuracy"], ".-", label=f"{key}")
+    
+    loss_axis.grid()
+    loss_axis.legend()
+    
+    acc_axis.grid()
+    acc_axis.legend()
+    
     plt.tight_layout()
-    plt.savefig(f"{model_folder}/generations.png")
+    
+    plt.savefig(save_to)
     
 
+def classification_on_lattent_space(real_dataset: dict, encoder:Model, style_names: list, training_parameters: dict, epochs=10):
+    # Le but est de savoir si notre content space disposes 
+    # Des informations de classes.
+    # Nous allons entrainer un model quelconque sur le content space 
+    # sur une tache de classification, 
+    # Et verifier si le modèle arrive bien à aprendre.
+    
+    print('[+] Classification on Content Space.')
+    
+    histories = dict()
+    evaluations = dict()
+    
+    classif_input_shape = encoder.output_shape[1:]
+    
+    for style in style_names:
+        print(f"[+] Train on content space for {style}...")
+        dset_train = real_dataset[f"{style}_train"]
+        dset_train = dset_train.map(lambda seq, label: (encoder(seq), label))
+        
+        dset_valid = real_dataset[f"{style}_valid"]
+        dset_valid = dset_valid.map(lambda seq, label: (encoder(seq), label))
+        
+        model = make_naive_discriminator(classif_input_shape, 5)
+                
+        history = model.fit(dset_train, validation_data=dset_valid, epochs=epochs)
+        
+        model.evaluate(dset_valid)
+        
+        histories[style] = history
+        evaluations[style] = model.evaluate(dset_valid)[1]
+        
+    return histories, evaluations
+
+    
+def is_content_space_domain_invariant(
+    real_content_train:tf.data.Dataset, real_content_valid:tf.data.Dataset,
+    real_style_dataset: dict, ce:Model, style_names: list, save_to, epochs=10):
+    # Entrainement que sur le content space du content dataset 
+    # et on test ses modèles sur les Style datasets.
+    
+    def plot_learning(hist, save_to: str):
+        plt.figure(figsize=(18, 10))
+        
+        ax= plt.subplot(211)
+        ax.plot(hist.history["loss"], '.-', label="loss")
+        ax.plot(hist.history["val_loss"], '.-', label="val_loss")
+        ax.grid()
+        
+        ax = plt.subplot(212)
+        ax.plot(hist.history["sparse_categorical_accuracy"], '.-', label="accuracy")
+        ax.plot(hist.history["val_sparse_categorical_accuracy"], '.-', label="val_accuracy")
+        ax.grid()
+        
+        plt.savefig(save_to)
 
 
-
+    accs = {}
+    input_shape = ce.output_shape[1:]
+    print(input_shape)
+    
+    model = make_naive_discriminator(input_shape, 5)
+    
+    cd_train = real_content_train.map(lambda seq, label: (ce(seq), label))
+    cd_valid = real_content_valid.map(lambda seq, label: (ce(seq), label))
+    
+    
+    # fit the model on the content space of the content dataset.
+    history = model.fit(cd_train, validation_data=cd_valid, epochs=epochs)
+    
+    plot_learning(history, save_to)
+    accs["content_"] = model.evaluate(cd_valid)[1]
+    
+    for style in style_names:
+        print(f"[+] Evaluate on Style {style}")
+        style_valid = real_style_dataset[f"{style}_valid"]
+        style_valid = style_valid.map(lambda seq, label: (ce(seq), label))
+        
+        accs[style] = model.evaluate(style_valid)
+        
+    return history, pd.DataFrame().from_dict(accs)
+         
+    
+    
 
 
 def main():
@@ -434,15 +642,52 @@ def main():
     ce, se, de = utils.load_models(model_folder)
     
     # Save model architecture in the folder to have a look.
-    tf.keras.utils.plot_model(ce, f"{model_folder}/content_encoder.png", show_shapes=True)
-    tf.keras.utils.plot_model(se, f"{model_folder}/style_encoder.png", show_shapes=True)
-    tf.keras.utils.plot_model(de, f"{model_folder}/decoder.png", show_shapes=True)
+    # plot_model(ce, f"{model_folder}/content_encoder.png", show_shapes=True)
+    # plot_model(se, f"{model_folder}/style_encoder.png", show_shapes=True)
+    # plot_model(de, f"{model_folder}/decoder.png", show_shapes=True)
     
     style_names = [get_name(p) for p in training_params["style_datasets"]]
     
     dsets_real, dsets_fake = generate_real_fake_datasets(training_params, ce, se, de)
     
-    make_generation_plot(dsets_real, dsets_fake, style_names, model_folder)
+    dset_real_cont_train, dset_real_cont_valid = dataLoader.loading_wrapper(
+        training_params["dset_content"], 
+        training_params["sequence_lenght_in_sample"], 
+        training_params["granularity"],
+        training_params["overlap"],
+        training_params['batch_size'], drop_labels=False)
+    
+    dset_real_cont_train = utils.extract_labels(dset_real_cont_train, training_params)
+    dset_real_cont_valid = utils.extract_labels(dset_real_cont_valid, training_params)
+    
+    
+    content_sequences = dataLoader.get_seed_visualization_content_sequences(
+        training_params["dset_content"], 
+        training_params["sequence_lenght_in_sample"])
+    
+    print("[+] Make Latent Space Representation.")
+    make_lattent_space_representation(content_sequences, dsets_real, style_names, ce, se, de, model_folder)
+    
+    
+    print("[+] make generation plot.")
+    make_generation_plot(content_sequences, dsets_real, ce, se, de, style_names, model_folder)
+    
+    
+    print(f"[+] Classification on content space.")
+    content_classif_hist, content_classif_accs = classification_on_lattent_space(dsets_real, ce, style_names, training_params)
+    plot_classif_metric(content_classif_hist, f"{model_folder}/classif_on_content_losses.png")
+    pd.DataFrame().from_dict(content_classif_accs).to_excel(f"{model_folder}/evaluation_content_space_classification.xlsx")
+    
+    
+    print(f"[+] Classification on Style space.")
+    style_classif_hist, style_classif_accs = classification_on_lattent_space(dsets_real, se, style_names, training_params)
+    plot_classif_metric(style_classif_hist, f"{model_folder}/classif_on_style_losses.png")
+    pd.DataFrame().from_dict(style_classif_accs).to_excel(f"{model_folder}/evaluation_style_space_classification.xlsx")
+    
+    content_space_accs = is_content_space_domain_invariant(dset_real_cont_train, dset_real_cont_valid, 
+                                                           dsets_real, ce, style_names, f"{model_folder}/domain_invariance_test_learning.png")
+    pd.DataFrame().from_dict(content_space_accs).to_excel(f"{model_folder}/evaluation_style_space_classification.xlsx")
+    
     
     df_noises, df_ampl, df_time_shift = compute_metrics(dsets_real, dsets_fake, style_names, model_folder)
     

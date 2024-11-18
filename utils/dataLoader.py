@@ -66,3 +66,31 @@ def loading_wrapper(df_path:str, sequence_lenght:int, granularity:int, overlap:i
 def get_batches(dset, n_batches):
     _arr = np.array([c for c in dset.take(n_batches)])
     return _arr.reshape((-1, _arr.shape[-2], _arr.shape[-1]))
+
+
+def get_seed_visualization_content_sequences(content_path:str, sequence_len:int):
+    path_placeholder = remove_format(content_path)
+    
+    valid_path = f"{path_placeholder}_valid.h5"
+    
+    _df_valid = load_dataframe(valid_path, False)
+    labels = _df_valid['labels'].unique()
+    
+    content_sequences = []
+    
+    for l in labels:
+        df_part = _df_valid[_df_valid["labels"] == l]
+        
+        indexes = df_part.index
+        
+        start_index = indexes[0]
+        end_index= start_index+ sequence_len
+
+        content_sequence = _df_valid.loc[start_index: end_index-1].values[:, :-1]
+        content_sequences.append(content_sequence)
+        
+        # plt.figure(figsize=(18, 10))
+        # plt.plot(content_sequence)
+        # plt.savefig(f"{l}.png")
+        
+    return content_sequences
