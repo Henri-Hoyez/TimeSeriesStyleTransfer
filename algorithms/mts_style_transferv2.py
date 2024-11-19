@@ -332,6 +332,7 @@ class Trainer():
             "epochs":self.default_arguments.simulated_arguments.epochs,
             "n_feature":self.default_arguments.simulated_arguments.n_feature,
             "seq_shape":self.default_arguments.simulated_arguments.seq_shape,
+            "n_classes":self.default_arguments.simulated_arguments.n_classes,
             "batch_size":self.default_arguments.simulated_arguments.batch_size,
             "n_styles":self.default_arguments.simulated_arguments.n_styles,
             "style_vector_size":self.default_arguments.simulated_arguments.style_vector_size,

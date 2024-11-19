@@ -88,34 +88,6 @@ def parse_arguments():
 
 def remove_format(path:str):
     return ".".join(path.split('.')[:-1])
-
-
-def get_seed_visualization_content_sequences(content_path:str, sequence_len:int):
-    path_placeholder = remove_format(content_path)
-    
-    valid_path = f"{path_placeholder}_valid.h5"
-    
-    _df_valid = dataLoader.load_dataframe(valid_path, False)
-    labels = _df_valid['labels'].unique()
-    
-    content_sequences = []
-    
-    for l in labels:
-        df_part = _df_valid[_df_valid["labels"] == l]
-        
-        indexes = df_part.index
-        
-        start_index = indexes[0]
-        end_index= start_index+ sequence_len
-
-        content_sequence = _df_valid.loc[start_index: end_index-1].values[:, :-1]
-        content_sequences.append(content_sequence)
-        
-        # plt.figure(figsize=(18, 10))
-        # plt.plot(content_sequence)
-        # plt.savefig(f"{l}.png")
-        
-    return content_sequences
     
     
 
@@ -131,7 +103,7 @@ def main():
     bs = standard_arguments.simulated_arguments.batch_size
     ###
     
-    content_viz_sequences = get_seed_visualization_content_sequences(shell_arguments.content_dset, sequence_length)
+    content_viz_sequences = dataLoader.get_seed_visualization_content_sequences(shell_arguments.content_dset, sequence_length)
     
     # exit()
         

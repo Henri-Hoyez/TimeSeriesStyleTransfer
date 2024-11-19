@@ -10,6 +10,7 @@ from tensorflow.python.keras.layers import Conv1D, LeakyReLU, Dense, Dropout, Fl
 from tensorflow.python.keras.models import Model
 
 
+from tensorflow.keras.layers import BatchNormalization, SpectralNormalization
 
 
 
@@ -19,7 +20,8 @@ def local_discriminator_part(_input, n_classes:int):
     x = LeakyReLU()(x)
     x = Dropout(0.2)(x)
 
-    x = SpectralNormalization(Conv1D(32, 5, 2, padding='same'))(x) # 64
+    x = Conv1D(32, 5, 2, padding='same')(x) # 64
+    
     x = LeakyReLU()(x)
     x = Dropout(0.2)(x)
 
