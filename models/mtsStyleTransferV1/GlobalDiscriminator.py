@@ -16,11 +16,15 @@ def make_global_discriminator(seq_length:int, n_signals:int, n_classes:int):
 
     x = Conv1D(32, 5, 2, padding='same')(_input) # 64
     x = LeakyReLU()(x)
-    x = Dropout(0.2)(x)
-
-    x = Conv1D(64, 5, 2, padding='same')(x)
+    
+    x = Conv1D(64, 5, 2, padding='same')(_input) # 64
     x = LeakyReLU()(x)
-    x = Dropout(0.2)(x)
+
+    x = Conv1D(128, 5, 2, padding='same')(x)
+    x = LeakyReLU()(x)
+
+    x = Conv1D(256, 5, 2, padding='same')(x)
+    x = LeakyReLU()(x)
 
     flatened = Flatten()(x)
     flatened = Dropout(0.0)(flatened)
@@ -38,6 +42,9 @@ def make_global_discriminator(seq_length:int, n_signals:int, n_classes:int):
     _class_output = Dense(n_classes, activation="softmax")(class_hidden)
 
     model = Model(inputs, [_output, _class_output], name="global_discriminator")
+    
+    model.summary()
+    # exit()
 
     return model
 

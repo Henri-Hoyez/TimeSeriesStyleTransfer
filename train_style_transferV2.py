@@ -4,12 +4,12 @@ import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 # os.environ["TF_USE_LEGACY_KERAS"]="1"
 
-# os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 import tensorflow as tf
 
-from keras import __version__
-tf.keras.__version__ = __version__
+# from keras import __version__
+# tf.keras.__version__ = __version__
 
 import logging
 logger = tf.get_logger()
@@ -17,6 +17,7 @@ logger.setLevel(logging.ERROR) # or logging.INFO, logging.WARNING, etc.
 
 import argparse
 import numpy as np
+import logging
 
 
 from utils.gpu_memory_grow import gpu_memory_grow
@@ -27,14 +28,7 @@ from utils import dataLoader
 from algorithms.mts_style_transferv2 import Trainer
 
 import matplotlib.pyplot as plt
-
 from models.classif_model import ClassifModel
-
-gpus = tf.config.list_physical_devices('GPU')
-
-# print(gpus)
-# exit()
-gpu_memory_grow(gpus)
 
 def parse_arguments():
     default_args = args()
@@ -80,6 +74,12 @@ def parse_arguments():
         help='The folder where the model will be saved.', 
         default=default_args.default_root_save_folder
     )
+    
+    parser.add_argument(
+        "--cpu",
+        help='If set the algorithm will run on cpu',
+        action='store_true'
+    )
 
     arguments = parser.parse_args()
 
@@ -88,12 +88,23 @@ def parse_arguments():
 
 def remove_format(path:str):
     return ".".join(path.split('.')[:-1])
-    
-    
+
 
 def main():
     shell_arguments = parse_arguments()
-
+    
+    if shell_arguments.cpu:
+        print("[+] Execute training on CPU.")
+        os.environ["CUDA_VISIBLE_DEVICES"]="-1"
+    
+    import tensorflow as tf
+    
+    gpus = tf.config.list_physical_devices('GPU')
+    gpu_memory_grow(gpus)
+    
+    logger = tf.get_logger()
+    logger.setLevel(logging.ERROR) 
+    
     standard_arguments = args()
     standard_arguments.simulated_arguments.epochs = shell_arguments.epochs
 
@@ -104,9 +115,7 @@ def main():
     ###
     
     content_viz_sequences = dataLoader.get_seed_visualization_content_sequences(shell_arguments.content_dset, sequence_length)
-    
-    # exit()
-        
+            
     content_dset_train, content_dset_valid = dataLoader.loading_wrapper(
         shell_arguments.content_dset,
         sequence_length, 

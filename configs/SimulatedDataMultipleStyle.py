@@ -36,24 +36,24 @@ class Proposed:
     discrinator_step = 1
 
     ##### Generator loss parameters.
-    l_reconstr = 0
-    l_local =  1.5#.2
-    l_global = 1.5
-    l_style_preservation = 1.
+    l_reconstr = 10
+    l_local =  10
+    l_global = 10
+    l_style_preservation = 2.
 
     ##### Content encoder loss
-    l_content = 1.5
-    encoder_adv = 0.1
+    l_content = 2.
+    encoder_adv = 0.2
 
     ##### Style Encoder
-    l_disentanglement = 1.5
-    l_triplet = 1.5
-    triplet_r = 0.00
+    l_disentanglement = 50.
+    l_triplet = 50.
+    triplet_r = 0.0
     
     # Train the generator or the discriminator based on the 
     # Performance of the Discriminator (Here the accuracy.)
-    discriminator_success_threashold = 0.75
-    alpha = 0.01
+    discriminator_success_threashold = 0.85
+    alpha = 0.001
     normal_training_epochs = 0
 
     met_params = MetricSimulatedData()

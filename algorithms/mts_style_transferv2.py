@@ -12,6 +12,7 @@ from sklearn.decomposition import PCA
 from tensorflow.python.keras.metrics import BinaryAccuracy, binary_accuracy
 from tensorflow.python.keras.optimizers import rmsprop_v2 as RMSprop
 
+from keras._tf_keras.keras.utils import plot_model
 
 import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -65,16 +66,15 @@ class Trainer():
         
         self.prepare()
         self.prepare_loggers(n_styles)
-        # self.plot_models()
-        # exit()
 
 
     def plot_models(self):
-        tf.keras.utils.plot_model(self.decoder, show_shapes=True, to_file='Decoder.png')
-        tf.keras.utils.plot_model(self.global_discriminator, show_shapes=True, to_file='global_discriminator.png')
-        tf.keras.utils.plot_model(self.local_discriminator, show_shapes=True, to_file='local_discriminator.png')
-        tf.keras.utils.plot_model(self.content_encoder, show_shapes=True, to_file='content_encoder.png')
-        tf.keras.utils.plot_model(self.style_encoder, show_shapes=True, to_file='style_encoder.png')
+
+        plot_model(self.decoder, show_shapes=True, to_file='Decoder.png',  expand_nested=True)
+        plot_model(self.global_discriminator, show_shapes=True, to_file='global_discriminator.png',  expand_nested=True)
+        plot_model(self.local_discriminator, show_shapes=True, to_file='local_discriminator.png',  expand_nested=True)
+        plot_model(self.content_encoder, show_shapes=True, to_file='content_encoder.png',  expand_nested=True)
+        plot_model(self.style_encoder, show_shapes=True, to_file='style_encoder.png',  expand_nested=True)
 
 
     def generate(self, content_batch, style_batch):

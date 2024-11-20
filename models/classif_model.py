@@ -14,7 +14,7 @@ from tensorflow.python.keras.metrics import SparseCategoricalAccuracy
 
 
 class ClassifModel():
-    def __init__(self, real_content_dset:str, real_style_dataset_path:list, standard_args:dict, epochs=1):
+    def __init__(self, real_content_dset:str, real_style_dataset_path:list, standard_args:dict, epochs=10):
         
         self.classification_model_folder = "classification_models"
         

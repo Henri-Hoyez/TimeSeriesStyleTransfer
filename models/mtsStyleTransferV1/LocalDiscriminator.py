@@ -13,7 +13,6 @@ from tensorflow.python.keras.models import Model
 from tensorflow.keras.layers import BatchNormalization, SpectralNormalization
 
 
-
 def local_discriminator_part(_input, n_classes:int):
 
     x = Conv1D(32, 5, 2, padding='same')(_input)
