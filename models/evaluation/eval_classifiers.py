@@ -1,30 +1,39 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ["TF_USE_LEGACY_KERAS"]="1"
-import tensorflow as tf
+
+from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.layers import Input, Conv1D, LeakyReLU, Flatten, Dropout, Dense, MaxPool1D
+from tensorflow.python.keras.initializers import RandomNormal
+from keras.src.layers.normalization.batch_normalization import BatchNormalization
+
+from tensorflow.python.keras.optimizer_v2.adam import Adam
+from tensorflow.python.keras.losses import SparseCategoricalCrossentropy, BinaryCrossentropy
+from tensorflow.python.keras.metrics import SparseCategoricalAccuracy, Accuracy
+from tensorflow.python.keras import Sequential
 
 
-def make_content_space_classif(n_sample_wiener, feat_wiener, n_labels) -> tf.keras.Model:
-    init = tf.keras.initializers.RandomNormal(seed=42)
+def make_content_space_classif(n_sample_wiener, feat_wiener, n_labels) -> Model:
+    init = RandomNormal(seed=42)
 
-    _input = tf.keras.Input((n_sample_wiener, feat_wiener))
+    _input = Input((n_sample_wiener, feat_wiener))
 
-    x = tf.keras.layers.Conv1D(16, 3, 1, padding='same', kernel_initializer=init)(_input)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.LeakyReLU()(x)
+    x = Conv1D(16, 3, 1, padding='same', kernel_initializer=init)(_input)
+    x = BatchNormalization()(x)
+    x = LeakyReLU()(x)
 
-    x = tf.keras.layers.Flatten()(x)
-    x = tf.keras.layers.Dropout(0.25)(x)
+    x = Flatten()(x)
+    x = Dropout(0.25)(x)
 
-    x = tf.keras.layers.Dense(n_labels)(x)
+    x = Dense(n_labels)(x)
     
-    model = tf.keras.Model(_input, x)
+    model = Model(_input, x)
 
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=tf.keras.metrics.SparseCategoricalAccuracy()
+        optimizer=Adam(),
+        loss=SparseCategoricalCrossentropy(from_logits=True),
+        metrics=SparseCategoricalAccuracy()
     )
 
     return model
@@ -39,37 +48,36 @@ def make_style_space_classifier(style_vector_shape:tuple, n_labels:int):
     model = tf.keras.Model(_input, x)
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=tf.keras.metrics.SparseCategoricalAccuracy()
+        optimizer=Adam(),
+        loss=SparseCategoricalCrossentropy(from_logits=True),
+        metrics=SparseCategoricalAccuracy()
         )
 
     return model
 
 
-def make_real_fake_classifier(seq_shape:tuple)-> tf.keras.models.Model:
+def make_real_fake_classifier(seq_shape:tuple)-> Model:
     # initializer = tf.keras.initializers.GlorotNormal()
 
-    model = tf.keras.Sequential()
+    model = Sequential()
 
+    model.add(Input(shape=seq_shape))
 
-    model.add(tf.keras.Input(shape=seq_shape))
+    model.add(Conv1D(filters=64, kernel_size=3, padding="same", activation='relu'))
+    model.add(MaxPool1D(pool_size=2))
 
-    model.add(tf.keras.layers.Conv1D(filters=64, kernel_size=3, padding="same", activation='relu'))
-    model.add(tf.keras.layers.MaxPool1D(pool_size=2))
+    model.add(Conv1D(filters=32, kernel_size=3, padding="same", activation='relu'))
+    model.add(MaxPool1D(pool_size=2))
 
-    model.add(tf.keras.layers.Conv1D(filters=32, kernel_size=3, padding="same", activation='relu'))
-    model.add(tf.keras.layers.MaxPool1D(pool_size=2))
+    model.add(Flatten())
 
-    model.add(tf.keras.layers.Flatten())
-
-    model.add(tf.keras.layers.Dense(units=50, activation="relu"))
-    model.add(tf.keras.layers.Dense(units=1, activation="sigmoid"))
+    model.add(Dense(units=50, activation="relu"))
+    model.add(Dense(units=1, activation="sigmoid"))
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
-        loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
-        metrics=tf.keras.metrics.Accuracy()
+        optimizer=Adam(),
+        loss=BinaryCrossentropy(from_logits=False),
+        metrics=Accuracy()
     )
 
     return model

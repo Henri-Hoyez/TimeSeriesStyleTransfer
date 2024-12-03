@@ -1,13 +1,22 @@
 import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 # os.environ["TF_USE_LEGACY_KERAS"]="1"
-import tensorflow as tf
+# import tensorflow as tf
 
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Layer
-from tensorflow.python.keras.initializers import RandomNormal
-from tensorflow.python.keras.layers import Conv1D, LeakyReLU, Dense, Conv1DTranspose, Reshape, Flatten
-from tensorflow.python.keras.models import Model
+# from tensorflow.python.keras import Input
+# from tensorflow.python.keras.layers import Layer
+# from tensorflow.python.keras.initializers import RandomNormal
+# from tensorflow.python.keras.layers import Conv1D, LeakyReLU, Dense, Conv1DTranspose, Reshape, Flatten
+# from tensorflow.python.keras.models import Model
+
+from tensorflow.keras.layers import BatchNormalization, SpectralNormalization # type: ignore
+from tensorflow.keras import Input # type: ignore 
+from tensorflow.keras.layers import SpectralNormalization # type: ignore
+from tensorflow.keras.layers import Conv1D, LeakyReLU, Dense, Dropout, Flatten, Concatenate, Conv1DTranspose, Reshape# type: ignore
+from tensorflow.keras.models import Model# type: ignore
+from tensorflow.keras.regularizers import L2 # type: ignore
+from tensorflow.keras.layers import Layer # type: ignore
+from tensorflow.keras.initializers import RandomNormal 
 
 from models.Layers.AdaIN import AdaIN
 
@@ -22,7 +31,6 @@ def linear_projection(style_input:Layer, actual_seq_len:int):
 def upsampling_block(content_input:Layer, style_input:Layer, filters):
 
     x = Conv1DTranspose(filters, 5, 2, padding='same')(content_input)
-    
     actual_sequence_len = x.shape[1]
     
     adapted_style_input = linear_projection(style_input, actual_sequence_len)
@@ -37,12 +45,7 @@ def upsampling_block(content_input:Layer, style_input:Layer, filters):
     x = Conv1D(filters, 5, 1, padding='same')(x)
     adapted_style_input = linear_projection(style_input, actual_sequence_len)
     x = AdaIN()(x, adapted_style_input)
-    x = LeakyReLU()(x)  
-    
-    # x = Conv1D(filters, 5, 1, padding='same')(x)
-    # adapted_style_input = linear_projection(style_input, actual_sequence_len)
-    # x = AdaIN()(x, adapted_style_input)
-    # x = LeakyReLU()(x)  
+    x = LeakyReLU()(x)   
 
     return x
 

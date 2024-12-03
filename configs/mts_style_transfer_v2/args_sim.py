@@ -6,17 +6,19 @@ class DafaultArguments():
         self.content_dataset_path = "data/simulated_dataset/01 - Source Domain_standardized.h5"
         
         self.style_datasets_path = [
-            "data/simulated_dataset/output_noise/0.03_standardized.h5",
-            "data/simulated_dataset/output_noise/0.05_standardized.h5",
-            "data/simulated_dataset/output_noise/0.08_standardized.h5",
-            "data/simulated_dataset/output_noise/0.10_standardized.h5",
-            "data/simulated_dataset/output_noise/0.12_standardized.h5",
-            "data/simulated_dataset/output_noise/0.15_standardized.h5",
-            "data/simulated_dataset/output_noise/0.18_standardized.h5",
-            "data/simulated_dataset/output_noise/0.20_standardized.h5",
-            "data/simulated_dataset/output_noise/0.23_standardized.h5",
             "data/simulated_dataset/output_noise/0.25_standardized.h5",
+            "data/simulated_dataset/output_noise/0.50_standardized.h5",
+            "data/simulated_dataset/output_noise/0.75_standardized.h5",
+            "data/simulated_dataset/output_noise/1.00_standardized.h5",
+            "data/simulated_dataset/output_noise/1.25_standardized.h5",
+            "data/simulated_dataset/output_noise/1.50_standardized.h5",
+            "data/simulated_dataset/output_noise/1.75_standardized.h5",
+            "data/simulated_dataset/output_noise/2.00_standardized.h5",
+            "data/simulated_dataset/output_noise/2.25_standardized.h5",
+            "data/simulated_dataset/output_noise/2.50_standardized.h5"
         ]
+        
+        
 
         self.simulated_arguments = Proposed()
 

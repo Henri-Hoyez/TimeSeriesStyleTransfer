@@ -9,8 +9,9 @@ from models import losses
 import numpy as np
 from sklearn.decomposition import PCA
 
-from tensorflow.python.keras.metrics import BinaryAccuracy, binary_accuracy
-from tensorflow.python.keras.optimizers import rmsprop_v2 as RMSprop
+from tensorflow.keras.metrics import BinaryAccuracy, binary_accuracy
+from tensorflow.keras.optimizers import RMSprop
+# from tensorflow.keras.utils import plot_model
 
 from keras._tf_keras.keras.utils import plot_model
 
@@ -88,40 +89,53 @@ class Trainer():
     def train(self):
         total_batch_train = "?"
         total_batch_valid = "?"
+        
+        gd_sucess = self.discr_success_th
+        ld_sucess = self.discr_success_th
 
         discr_success = self.discr_success_th
         discr_success_valid = self.discr_success_th
-        alpha = 0.01
+        alpha = self.default_arguments.simulated_arguments.alpha
 
         for e in range(self.default_arguments.simulated_arguments.epochs):
             self.logger.reset_metric_states()
             self.logger.reset_valid_states()
 
-            self.global_discr_acc_train.reset_states()
-            self.global_discr_acc_valid.reset_states()
+            self.global_discr_acc_train.reset_state()
+            self.global_discr_acc_valid.reset_state()
 
-            self.local_discr_acc_train.reset_states()
-            self.local_discr_acc_valid.reset_states()
+            self.local_discr_acc_train.reset_state()
+            self.local_discr_acc_valid.reset_state()
             
-            print("[+] Train Step...")
+            print("[+] Train Step...")  
             for i, (content_batch, style_batch) in enumerate(zip(self.dset_content_train, self.dsets_style_train)):
 
                 content_sequence1 = content_batch[:int(self.batch_size)]
                 content_sequence2 = content_batch[int(self.batch_size):]
     
-                # Then train one another given their performances.
-                train_d = bool(discr_success < self.discr_success_th)
+                # Then train one another given their performances. 
+                force_backward = i == 0 and e == 0                         # Force the full execution for tensorflow mapping.  
+                train_global_d = bool(gd_sucess < self.discr_success_th)
+                train_local_d = bool(ld_sucess < self.discr_success_th)
+                train_g = (not train_global_d and not train_local_d)
+            
+            
+                if train_global_d:
+                    test = 'Train Global Discriminator'
+                    
+                if train_local_d:
+                    test = "Train Local Discriminator      "
+                    
+                if train_g:
+                    test = "Train Generator            "
 
-                if train_d:
-                    test = 'Train Discriminator'
-                else:
-                    test = "Train Generator      "
+                global_d_accs, local_d_accs = self.discriminator_step(content_sequence1, style_batch, train_global_d or force_backward, train_local_d or force_backward)
 
-                global_d_accs, local_d_accs = self.discriminator_step(content_sequence1, style_batch, train_d or i == 0)
-
-                self.generator_step(content_sequence1, content_sequence2, style_batch, not train_d or i == 0) # , backward=
+                self.generator_step(content_sequence1, content_sequence2, style_batch, train_g or force_backward)
                 
-                # discr_accs =  central_channel_d_treadoff* global_d_accs + (1- central_channel_d_treadoff)* local_d_accs
+                gd_sucess = gd_sucess * (1. - alpha) + alpha * (global_d_accs)      
+                ld_sucess = ld_sucess * (1. - alpha) + alpha * (local_d_accs)  
+                
                 discr_accs =  np.max([global_d_accs, local_d_accs])
                 discr_success = discr_success * (1. - alpha) + alpha * (discr_accs)
 
@@ -202,13 +216,8 @@ class Trainer():
 
     
     def training_evaluation(self, epoch):
-        
-        # print(self.seed_content_train.shape, self.seed_styles_train.shape)
-        # print(self.seed_content_valid.shape, self.seed_styles_valid.shape)
-        # exit()
-        
+
         mean_acc = self.classif_metric.evaluate(self.content_encoder, self.style_encoder, self.decoder)
-        
         self.logger.valid_loggers["00 - Model Classification Acc"](mean_acc)
         
         generation_style_train = np.array([self.generate(self.seed_content_train, style_train) for style_train in self.seed_styles_train])
@@ -227,7 +236,7 @@ class Trainer():
         
         self.logger.log_train(plot_buff, epoch)
         self.logger.log_valid(epoch)
-        
+            
 
     # def metric_evaluation(self, generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid):
     #     metric_s1_train = metric.compute_metric(generation_style1_train, self.seed_styles_train[0], self.default_arguments.simulated_arguments)
@@ -418,11 +427,11 @@ class Trainer():
         self.logger = TensorboardLog(self.shell_arguments, metric_keys)
 
     def prepare(self):
-        self.opt_content_encoder = RMSprop.RMSprop(learning_rate=0.001) # 0.0005
-        self.opt_style_encoder = RMSprop.RMSprop(learning_rate=0.001) # 0.0005
-        self.opt_decoder = RMSprop.RMSprop(learning_rate=0.001) # 0.0005
-        self.local_discriminator_opt = RMSprop.RMSprop(learning_rate=0.001) # 0.0005
-        self.global_discriminator_opt = RMSprop.RMSprop(learning_rate=0.001) # 0.0005 
+        self.opt_content_encoder = RMSprop(learning_rate=0.001) # 0.0005
+        self.opt_style_encoder = RMSprop(learning_rate=0.001) # 0.0005
+        self.opt_decoder = RMSprop(learning_rate=0.001) # 0.0005
+        self.local_discriminator_opt = RMSprop(learning_rate=0.001) # 0.0005
+        self.global_discriminator_opt = RMSprop(learning_rate=0.001) # 0.0005 
 
     def instanciate_datasets(self, 
                              content_dset_train:tf.data.Dataset, 
@@ -438,7 +447,7 @@ class Trainer():
 
 
     @tf.function
-    def discriminator_step(self, content_sequence1, style_batch, backward):
+    def discriminator_step(self, content_sequence1, style_batch, g_backward, l_backward):
         # Discriminator Step
 
         style_sequences, style_labels = style_batch[0], style_batch[1]
@@ -476,8 +485,10 @@ class Trainer():
         global_discr_gradient = discr_tape.gradient([g_crit_loss, g_style_real], self.global_discriminator.trainable_variables)
         grads = discr_tape.gradient(l_loss, self.local_discriminator.trainable_variables)
 
-        if backward:
+        if g_backward:
             self.global_discriminator_opt.apply_gradients(zip(global_discr_gradient, self.global_discriminator.trainable_variables)) 
+            
+        if l_backward:
             self.local_discriminator_opt.apply_gradients(zip(grads, self.local_discriminator.trainable_variables))
     
 

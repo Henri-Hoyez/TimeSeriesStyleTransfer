@@ -2,8 +2,11 @@ import tensorflow as tf
 from tensorflow.python.keras.models import Model
 
 import tensorflow as tf
+
 from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Conv1D, Flatten, Dense, MaxPool1D
+from tensorflow.python.keras.layers import Conv1D, Flatten, Dense, MaxPool1D, LeakyReLU, ReLU, Dropout
+from keras.src.layers.normalization.batch_normalization import BatchNormalization
+
 from keras.src.layers.normalization.group_normalization import GroupNormalization
 from tensorflow.python.keras.optimizers import rmsprop_v2 as RMSprop
 from tensorflow.python.keras.losses import SparseCategoricalCrossentropy
@@ -13,30 +16,29 @@ from tensorflow.python.keras import Sequential
 
 
 def make_naive_discriminator(seq_shape:tuple, n_classes:int)-> Model:
-    # initializer = tf.keras.initializers.GlorotNormal()
 
-    model = Sequential()
+    _input = Input(seq_shape)
 
+    x = Conv1D(8, 3, 1, padding='same')(_input) 
+    x = BatchNormalization()(x)
+    x = MaxPool1D()(x)
+    x = ReLU()(x)
+    #
 
-    model.add(Input(shape=seq_shape))
+    x = Conv1D(16, 3, 1, padding='same')(x)
+    x = BatchNormalization()(x)
+    x = MaxPool1D()(x)
+    x = ReLU()(x)
 
-    model.add(Conv1D(filters=128, kernel_size=3, activation='relu', padding="same"))
-    model.add(MaxPool1D(pool_size=2))
-
-    model.add(Conv1D(filters=256, kernel_size=3, padding="same", activation='relu'))
-    model.add(MaxPool1D(pool_size=2))
-
-    model.add(Flatten())
-
-    model.add(Dense(units=50, activation="relu"))
+    x = Flatten()(x)
+    x = Dense(32)(x)
+    x = ReLU()(x)
     
-    model.add(Dense(units=n_classes, activation="softmax"))
+    x = Dense(n_classes, activation="softmax")(x)
 
-    model.compile(
-        optimizer=RMSprop.RMSprop(),
-        loss=SparseCategoricalCrossentropy(from_logits=False),
-        metrics=SparseCategoricalAccuracy()
-    )
+    model = Model(_input, x)
+    
+    model.compile("adam", loss="sparse_categorical_crossentropy", metrics=["sparse_categorical_accuracy"])
     
     return model
 

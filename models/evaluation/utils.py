@@ -12,7 +12,8 @@ import numpy as np
 import json
 from models.evaluation import eval_classifiers
 
-from tensorflow.python.keras.models import load_model
+from tensorflow.python.keras.models import load_model, Model
+
 
 def parse_arguments():
     default_args = args()
@@ -88,7 +89,7 @@ def generate(
     generated = tf.concat(generated, -1)
     return generated
 
-def encode_dataset(dset:tf.data.Dataset, content_extractor:tf.keras.Model, args:dict) -> tf.data.Dataset:
+def encode_dataset(dset:tf.data.Dataset, content_extractor:Model, args:dict) -> tf.data.Dataset:
     label_idx = int(args.simulated_arguments.sequence_lenght_in_sample//2)
     content_space_dataset = dset.map(lambda seq: (content_extractor(seq[:, :, :-1]), seq[:, label_idx, -1]))
     return content_space_dataset
@@ -109,9 +110,9 @@ def load_dset(df_path:str, training_params:dict, drop_labels=False, bs = 64) -> 
 def translate_labeled_dataset(
         content_dset:tf.data.Dataset, 
         style_dset:tf.data.Dataset, 
-        content_encoder:tf.keras.Model, 
-        style_encoder:tf.keras.Model, 
-        decoder:tf.keras.Model, args:dict) -> tf.data.Dataset:
+        content_encoder:Model, 
+        style_encoder:Model, 
+        decoder:Model, args:dict) -> tf.data.Dataset:
     
     label_idx = int(args.simulated_arguments.sequence_lenght_in_sample//2)
 
@@ -130,9 +131,9 @@ def translate_labeled_dataset(
 def translate_dataset(
         content_dset:tf.data.Dataset, 
         style_dset:tf.data.Dataset, 
-        content_encoder:tf.keras.Model, 
-        style_encoder:tf.keras.Model, 
-        decoder:tf.keras.Model, args:dict) -> tf.data.Dataset:
+        content_encoder:Model, 
+        style_encoder:Model, 
+        decoder:Model, args:dict) -> tf.data.Dataset:
     
     content_space = content_dset.map(lambda seq: (content_encoder(seq)))
     style_space = style_dset.map(lambda seq: style_encoder(seq))
@@ -142,7 +143,7 @@ def translate_dataset(
     return content_style.map(lambda c,s: tf.concat(decoder([c,s], training=False), -1))
     
 
-def predictions_on_content_space(content_encoder:tf.keras.Model, model_config:dict, data_loading_arguments:dict):
+def predictions_on_content_space(content_encoder:Model, model_config:dict, data_loading_arguments:dict):
 
     dset_content_train, dset_content_valid = load_dset(model_config["dset_content"], data_loading_arguments, drop_labels=False)
 
@@ -194,7 +195,7 @@ def get_name(path:str):
 def get_path(path:str):
     return "/".join(path.split("/")[:-1])
     
-def classification_on_style_space(dataset_path:str, style_encoder:tf.keras.Model, default_args:dict):
+def classification_on_style_space(dataset_path:str, style_encoder:Model, default_args:dict):
     style_vector_size = default_args.simulated_arguments.style_vector_size
     n_labels = 5
     epochs = 15
@@ -214,9 +215,9 @@ def classification_on_style_space(dataset_path:str, style_encoder:tf.keras.Model
 def real_fake_classification(
         content_path:str, 
         style_path:str, 
-        content_encoder:tf.keras.Model, 
-        style_encoder:tf.keras.Model, 
-        decoder:tf.keras.Model,
+        content_encoder:Model, 
+        style_encoder:Model, 
+        decoder:Model,
         dset_default_arguments:dict):
     
     seq_len = dset_default_arguments.simulated_arguments.sequence_lenght_in_sample

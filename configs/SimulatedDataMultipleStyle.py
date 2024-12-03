@@ -15,7 +15,7 @@ class Proposed:
     n_feature = 7
     n_classes = 5
     seq_shape = (sequence_lenght_in_sample, n_feature)
-    batch_size = 128
+    batch_size = 32
 
     train_split = 0.7
     test_split  = 0.3
@@ -36,24 +36,24 @@ class Proposed:
     discrinator_step = 1
 
     ##### Generator loss parameters.
-    l_reconstr = 10
-    l_local =  10
-    l_global = 10
+    l_reconstr = 2.
+    l_local =  1.5
+    l_global = 1.5
     l_style_preservation = 2.
 
     ##### Content encoder loss
-    l_content = 2.
-    encoder_adv = 0.2
+    l_content =1.5
+    encoder_adv = 0.1
 
     ##### Style Encoder
-    l_disentanglement = 50.
-    l_triplet = 50.
-    triplet_r = 0.0
+    l_disentanglement = 1.5
+    l_triplet = 1.5
+    triplet_r = 0.05
     
     # Train the generator or the discriminator based on the 
     # Performance of the Discriminator (Here the accuracy.)
-    discriminator_success_threashold = 0.85
-    alpha = 0.001
+    discriminator_success_threashold = 0.75
+    alpha = 0.01
     normal_training_epochs = 0
 
     met_params = MetricSimulatedData()

@@ -3,28 +3,28 @@ import os
 os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
 
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Conv1D, LeakyReLU, Dense, Dropout, Flatten, Concatenate
-from tensorflow.python.keras.models import Model
+# from tensorflow.python.keras import Input
+# from tensorflow.python.keras.layers import Conv1D, LeakyReLU, Dense, Dropout, Flatten, Concatenate
+# from tensorflow.python.keras.models import Model
+
+from tensorflow.keras import Input
+from tensorflow.keras.layers import SpectralNormalization
+from tensorflow.keras.layers import Conv1D, LeakyReLU, Dense, Dropout, Flatten, Concatenate
+from tensorflow.keras.models import Model
 
 
 def make_global_discriminator(seq_length:int, n_signals:int, n_classes:int):
-
     inputs = [Input((seq_length, 1)) for _ in range(n_signals)]
 
     _input = Concatenate(-1)(inputs)
 
-    x = Conv1D(32, 5, 2, padding='same')(_input) # 64
+    x = SpectralNormalization(Conv1D(32, 5, 2, padding='same'))(_input) # 64
     x = LeakyReLU()(x)
-    
-    x = Conv1D(64, 5, 2, padding='same')(_input) # 64
-    x = LeakyReLU()(x)
+    x = Dropout(0.2)(x)
 
-    x = Conv1D(128, 5, 2, padding='same')(x)
+    x = SpectralNormalization(Conv1D(64, 5, 2, padding='same'))(x)
     x = LeakyReLU()(x)
-
-    x = Conv1D(256, 5, 2, padding='same')(x)
-    x = LeakyReLU()(x)
+    x = Dropout(0.2)(x)
 
     flatened = Flatten()(x)
     flatened = Dropout(0.0)(flatened)
@@ -38,13 +38,11 @@ def make_global_discriminator(seq_length:int, n_signals:int, n_classes:int):
     class_hidden = Dense(50)(class_hidden)
     class_hidden = LeakyReLU()(class_hidden)
     
-    # class_hidden = Dense(10, activation='relu')(class_hidden)
     _class_output = Dense(n_classes, activation="softmax")(class_hidden)
 
     model = Model(inputs, [_output, _class_output], name="global_discriminator")
     
-    model.summary()
-    # exit()
+    
 
     return model
 

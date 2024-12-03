@@ -1,16 +1,20 @@
 import numpy as np
-from utils.metric import signature_on_batch
 from configs.SimulatedData import Proposed
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
 import matplotlib as mpl
 
+from utils.gpu_memory_grow import gpu_memory_grow
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-os.environ["TF_USE_LEGACY_KERAS"]="1"
+# os.environ["TF_USE_LEGACY_KERAS"]="1"
 import tensorflow as tf
+
+
+gpus = tf.config.list_physical_devices('GPU')
+gpu_memory_grow(gpus)
 
 
 
@@ -51,6 +55,7 @@ def plot_generated_sequence(
     # Shape [n_style, nsequence, nfeat]
 
     # Generate viz for plots 
+    print('[+] plotting')
     style_index = 0
     n_style = seed_style_sequences.shape[0]
     
@@ -97,9 +102,10 @@ def plot_generated_sequence(
     content_of_style_sequences = content_encoder(seed_style_sequences[:, style_index, :])
     
     # Make point for Style Scatter plot. 
-    c1s = np.array([c[0]]* reshaped_style_sequences.shape[0])
-
-    gen_c1_s = decoder([c1s, style_encoded])
+    c1s = tf.convert_to_tensor([c[0]]* reshaped_style_sequences.shape[0])
+    
+    with tf.device("cpu:0"):
+        gen_c1_s = decoder([c1s, style_encoded])
     gen_c1_s = tf.concat(gen_c1_s, -1)
     
     style_of_generated_viz = style_encoder(gen_c1_s)
@@ -274,8 +280,9 @@ def plot_multistyle_sequences(
         
         draw_content_space(ax_content, gen_content_space[i], color=colors[2*i+1], label=f"Content of Gen Style {i+1}", arrow_width=.0005*diag) 
     
-    ax_style.legend()  
-    ax_content.legend()
+    
+    ax_style.legend(bbox_to_anchor=(1.0, 1.038), loc='upper left')
+    ax_content.legend(bbox_to_anchor=(-.1, 1.038), loc='upper right')
     plt.tight_layout()
     
     if not to_file is None:

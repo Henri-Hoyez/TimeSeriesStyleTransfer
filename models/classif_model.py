@@ -16,9 +16,13 @@ from tensorflow.python.keras.metrics import SparseCategoricalAccuracy
 class ClassifModel():
     def __init__(self, real_content_dset:str, real_style_dataset_path:list, standard_args:dict, epochs=10):
         
-        self.classification_model_folder = "classification_models"
+        folder_name = real_style_dataset_path[0].split("/")[-2]
         
-        os.makedirs(self.classification_model_folder, exist_ok=True)
+        self.classification_model_folder = f"classification_models/{folder_name}"
+        
+        print(self.classification_model_folder)
+        
+        os.makedirs(self.classification_model_folder + '/training_curves', exist_ok=True)
     
         sequence_length = standard_args.simulated_arguments.sequence_lenght_in_sample
         gran = standard_args.simulated_arguments.granularity

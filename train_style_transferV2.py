@@ -6,14 +6,12 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # os.environ["CUDA_VISIBLE_DEVICES"]="-1"
-import tensorflow as tf
 
 # from keras import __version__
 # tf.keras.__version__ = __version__
 
 import logging
-logger = tf.get_logger()
-logger.setLevel(logging.ERROR) # or logging.INFO, logging.WARNING, etc.
+
 
 import argparse
 import numpy as np

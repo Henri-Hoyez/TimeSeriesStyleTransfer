@@ -4,7 +4,7 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import tensorflow as tf
-tf.keras.layers.Dense(100)
+
 from utils.gpu_memory_grow import gpu_memory_grow
 
 import matplotlib.pyplot as plt
@@ -51,9 +51,9 @@ def get_name(path:str):
 def stylize(
         content_dset:tf.data.Dataset, 
         style_sequence:tf.Tensor, 
-        content_encoder:tf.keras.Model, 
-        style_encoder:tf.keras.Model, 
-        decoder:tf.keras.Model) -> tf.data.Dataset:
+        content_encoder:Model, 
+        style_encoder:Model, 
+        decoder:Model) -> tf.data.Dataset:
     
     content_space = content_dset.map(lambda seq, _: (content_encoder(seq)), num_parallel_calls=tf.data.AUTOTUNE).cache()
     labels = content_dset.map(lambda _,l : l, num_parallel_calls=tf.data.AUTOTUNE).cache()
