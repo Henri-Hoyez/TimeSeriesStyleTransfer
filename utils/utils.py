@@ -6,3 +6,4 @@ def get_name(path:str):
 
 def get_path(path:str):
     return "/".join(path.split("/")[:-1])
+

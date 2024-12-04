@@ -20,17 +20,17 @@ def make_global_discriminator(seq_length:int, n_signals:int, n_classes:int):
 
     x = SpectralNormalization(Conv1D(32, 5, 2, padding='same'))(_input) # 64
     x = LeakyReLU()(x)
-    x = Dropout(0.2)(x)
+    # x = Dropout(0.2)(x)
 
     x = SpectralNormalization(Conv1D(64, 5, 2, padding='same'))(x)
     x = LeakyReLU()(x)
-    x = Dropout(0.2)(x)
+    # x = Dropout(0.2)(x)
 
     flatened = Flatten()(x)
     flatened = Dropout(0.0)(flatened)
     
     crit_hidden_layer = Dense(10)(flatened)
-    _output = Dense(1, activation="sigmoid")(crit_hidden_layer)
+    _output = Dense(1, activation="linear")(crit_hidden_layer)
 
     class_hidden = Dense(150)(flatened)
     class_hidden = LeakyReLU()(class_hidden)

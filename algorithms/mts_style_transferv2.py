@@ -10,7 +10,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 
 from tensorflow.keras.metrics import BinaryAccuracy, binary_accuracy
-from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.optimizers import RMSprop, Adam
 # from tensorflow.keras.utils import plot_model
 
 from keras._tf_keras.keras.utils import plot_model
@@ -115,9 +115,9 @@ class Trainer():
     
                 # Then train one another given their performances. 
                 force_backward = i == 0 and e == 0                         # Force the full execution for tensorflow mapping.  
-                train_global_d = bool(gd_sucess < self.discr_success_th)
-                train_local_d = bool(ld_sucess < self.discr_success_th)
-                train_g = (not train_global_d and not train_local_d)
+                train_global_d = bool(gd_sucess < self.discr_success_th) or True
+                train_local_d = bool(ld_sucess < self.discr_success_th) or True
+                train_g = (not train_global_d and not train_local_d) or True
             
             
                 if train_global_d:
@@ -476,10 +476,12 @@ class Trainer():
             l_crit_fake = self.local_discriminator(generated, training=True)
 
             # Compute the loss for GLOBAL the Discriminator
-            g_crit_loss = losses.discriminator_loss(g_crit_real, g_crit_fake)
+            # g_crit_loss = losses.discriminator_loss(g_crit_real, g_crit_fake)
+            g_crit_loss = losses.least_square_discriminator_loss(g_crit_real, g_crit_fake)
             g_style_real = losses.style_classsification_loss(g_style_classif_real, style_labels)
 
-            l_loss = losses.local_discriminator_loss(l_crit_real, l_crit_fake)
+            # l_loss = losses.local_discriminator_loss(l_crit_real, l_crit_fake)
+            l_loss = losses.least_square_local_discriminator_loss(l_crit_real, l_crit_fake)
 
         # (GOBAL DISCRIMINATOR): Real / Fake and style
         global_discr_gradient = discr_tape.gradient([g_crit_loss, g_style_real], self.global_discriminator.trainable_variables)
@@ -559,12 +561,14 @@ class Trainer():
             l_crit_on_fake = self.local_discriminator(generations, training=False)
 
             # Channel Discriminator losses
-            local_realness_loss = losses.local_generator_loss(l_crit_on_fake)
+            # local_realness_loss = losses.local_generator_loss(l_crit_on_fake)
+            local_realness_loss = losses.least_square_local_generator_loss(l_crit_on_fake)
             
             # Global Generator losses.
 
             global_style_loss = losses.style_classsification_loss(style_classif_fakes, style_label_extended)
-            global_realness_loss = losses.generator_loss(crit_on_fake)
+            # global_realness_loss = losses.generator_loss(crit_on_fake)
+            global_realness_loss = losses.least_square_generator_loss(crit_on_fake)
 
             ########
             content_preservation = losses.fixed_point_content(encoded_content, c_generations)
@@ -646,12 +650,14 @@ class Trainer():
         l_crit_on_fake = self.local_discriminator(generations, training=False)
 
         # Channel Discriminator losses
-        local_realness_loss = losses.local_generator_loss(l_crit_on_fake)
+        # local_realness_loss = losses.local_generator_loss(l_crit_on_fake)
+        local_realness_loss = losses.least_square_local_generator_loss(l_crit_on_fake)
         
         # Global Generator losses.
 
         global_style_loss = losses.style_classsification_loss(style_classif_fakes, style_label_extended)
-        global_realness_loss = losses.generator_loss(crit_on_fake)
+        # global_realness_loss = losses.generator_loss(crit_on_fake)
+        global_realness_loss = losses.least_square_generator_loss(crit_on_fake)
 
         ########
         content_preservation = losses.fixed_point_content(encoded_content, c_generations)
@@ -713,11 +719,12 @@ class Trainer():
         l_crit_fake = self.local_discriminator(generated, training=True)
 
         # Compute the loss for GLOBAL the Discriminator
-        g_crit_loss = losses.discriminator_loss(g_crit_real, g_crit_fake)
+        # g_crit_loss = losses.discriminator_loss(g_crit_real, g_crit_fake)
+        g_crit_loss = losses.least_square_discriminator_loss(g_crit_real, g_crit_fake)
         g_style_real = losses.style_classsification_loss(g_style_classif_real, style_labels)
 
-        l_loss = losses.local_discriminator_loss(l_crit_real, l_crit_fake)
-
+        # l_loss = losses.local_discriminator_loss(l_crit_real, l_crit_fake)
+        l_loss = losses.least_square_discriminator_loss(l_crit_real, l_crit_fake)
 
         # Calculate the performances of the Discriminator.
         real_labels = tf.ones_like(g_crit_real)

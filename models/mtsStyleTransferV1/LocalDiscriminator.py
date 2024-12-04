@@ -19,16 +19,16 @@ def local_discriminator_part(_input, n_classes:int):
 
     x = SpectralNormalization(Conv1D(32, 5, 2, padding='same'))(_input)
     x = LeakyReLU()(x)
-    x = Dropout(0.2)(x)
+    # x = Dropout(0.2)(x)
 
     x = SpectralNormalization(Conv1D(32, 5, 2, padding='same'))(x) # 64
     x = LeakyReLU()(x)
-    x = Dropout(0.2)(x)
+    # x = Dropout(0.2)(x)
 
     x = Flatten()(x)
     stage1_dropouted = Dropout(0.0)(x)
 
-    _output = Dense(1, activation="sigmoid")(stage1_dropouted)
+    _output = Dense(1, activation="linear")(stage1_dropouted)
 
     return _output
 

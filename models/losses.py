@@ -11,10 +11,13 @@ from tensorflow.python.keras.metrics import binary_accuracy
 cross_entropy = BinaryCrossentropy(from_logits=False)
 error_classif = SparseCategoricalCrossentropy()
 
+
+
 def recontruction_loss(true:tf.Tensor, generated:tf.Tensor):
     diff = generated- true
     result = tf.math.reduce_mean(tf.square(diff))
     return tf.convert_to_tensor([result])
+    
 
 def discriminator_loss(real_output, fake_output):
     real_loss = cross_entropy(tf.ones_like(real_output), real_output)
@@ -64,6 +67,49 @@ def local_discriminator_accuracy(y_true, y_preds):
 
     return tf.reduce_mean(accs)
 
+
+# ###                 ### #
+# LEAST SQUARE GAN LOSSES #
+# ###                 ### # 
+def least_square_discriminator_loss(real_output, fake_output):
+    a = -1
+    b = 0 
+    _real_gt = tf.zeros_like(real_output) + a
+    _fake_gt = tf.zeros_like(fake_output) + b
+    
+    loss = 0.5* tf.reduce_mean(tf.square(real_output - _real_gt)) + 0.5* tf.reduce_mean(tf.square(fake_output - _fake_gt))
+    return loss
+
+
+def least_square_generator_loss(fake_output):
+    c = -1 
+    _fake_gt = tf.zeros_like(fake_output) + c
+    
+    loss = 0.5* tf.reduce_mean(tf.square(fake_output - _fake_gt))
+    return loss
+
+
+def least_square_local_generator_loss(fake_output):
+    individual_losses = []
+
+    for crit_on_fake in fake_output:
+        individual_losses.append(least_square_generator_loss(crit_on_fake))
+        
+    return tf.convert_to_tensor(individual_losses)
+
+
+def least_square_local_discriminator_loss(real_output, fake_output):
+    individual_losses = []
+
+    for local_real, local_fake in zip(real_output, fake_output):
+        _loss = least_square_discriminator_loss(local_real, local_fake)
+        individual_losses.append(_loss)
+        
+    return individual_losses
+
+
+
+# ###
 
 
 def l2(x:tf.Tensor, y:tf.Tensor):
