@@ -15,7 +15,7 @@ class Proposed:
     n_feature = 7
     n_classes = 5
     seq_shape = (sequence_lenght_in_sample, n_feature)
-    batch_size = 32
+    batch_size = 128
 
     train_split = 0.7
     test_split  = 0.3
@@ -43,7 +43,7 @@ class Proposed:
 
     ##### Content encoder loss
     l_content =1.5
-    encoder_adv = 0.1
+    encoder_adv = 0.5
 
     ##### Style Encoder
     l_disentanglement = 1.5

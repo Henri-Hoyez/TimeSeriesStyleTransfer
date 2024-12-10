@@ -427,11 +427,11 @@ class Trainer():
         self.logger = TensorboardLog(self.shell_arguments, metric_keys)
 
     def prepare(self):
-        self.opt_content_encoder = RMSprop(learning_rate=0.001) # 0.0005
-        self.opt_style_encoder = RMSprop(learning_rate=0.001) # 0.0005
-        self.opt_decoder = RMSprop(learning_rate=0.001) # 0.0005
-        self.local_discriminator_opt = RMSprop(learning_rate=0.001) # 0.0005
-        self.global_discriminator_opt = RMSprop(learning_rate=0.001) # 0.0005 
+        self.opt_content_encoder = RMSprop(learning_rate=0.0002) # 0.0005
+        self.opt_style_encoder = RMSprop(learning_rate=0.0002) # 0.0005
+        self.opt_decoder = RMSprop(learning_rate=0.0002) # 0.0005
+        self.local_discriminator_opt = RMSprop(learning_rate=0.0002) # 0.0005
+        self.global_discriminator_opt = RMSprop(learning_rate=0.0002) # 0.0005 
 
     def instanciate_datasets(self, 
                              content_dset_train:tf.data.Dataset, 
