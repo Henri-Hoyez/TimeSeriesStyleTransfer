@@ -15,7 +15,7 @@ class Proposed:
     n_feature = 7
     n_classes = 5
     seq_shape = (sequence_lenght_in_sample, n_feature)
-    batch_size = 128
+    batch_size = 64
 
     train_split = 0.7
     test_split  = 0.3

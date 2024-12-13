@@ -111,15 +111,41 @@ def least_square_local_discriminator_loss(real_output, fake_output):
 
 # ###
 
-
 def l2(x:tf.Tensor, y:tf.Tensor):
     diff = tf.square(y- x)
     _distance = tf.reduce_sum(diff, axis=-1)
     return _distance
 
+def path_area(content_path:tf.Tensor):
+    # We will suppose that the encoded path is bahaving inside a 
+    # Rectangle
+     
+    _x_min = tf.reduce_min(content_path[:, :, 0], axis=-1)
+    _x_max = tf.reduce_max(content_path[:, :, 0], axis=-1)
+    
+    _y_min = tf.reduce_min(content_path[:, :, 1], axis=-1)
+    _y_max = tf.reduce_max(content_path[:, :, 1], axis=-1)
+    
+    side1 = tf.abs(_x_max - _x_min)
+    side2 = tf.abs(_y_max - _y_min)
+    
+    return side1 * side2
+
+def mean_content_distance(content_path: tf.Tensor):
+    
+    diff = tf.square(content_path[:, 1:]- content_path[:, :-1])
+    diff = tf.sqrt(tf.reduce_sum(diff, axis=-1))
+
+    return tf.reduce_mean(diff)
+    
+    
+
 def fixed_point_content(encoded_content_real, encoded_content_fake):
     diff = l2(encoded_content_real, encoded_content_fake)
-    return tf.reduce_mean(diff)
+    
+    mean_distance = mean_content_distance(encoded_content_real)
+    
+    return tf.reduce_mean(diff)/mean_distance
 
 
 def _pairwise_distance(a_embeddings, b_embeddings):
