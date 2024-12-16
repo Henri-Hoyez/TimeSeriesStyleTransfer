@@ -639,11 +639,16 @@ class Trainer():
         _bs = content_sequence1.shape[0]
 
         encoded_content= self.content_encoder(contents, training=True)
+        content_of_styles= self.content_encoder(styles, training=True)
         encoded_styles = self.style_encoder(styles, training=True)
 
         generations = self.decoder([encoded_content, encoded_styles], training=True)
-
         merged_generations = tf.concat(generations, -1)
+        
+        id_styles = self.decoder([content_of_styles, encoded_styles], training=True)
+        style_reconstruction = losses.recontruction_loss(styles, id_styles)
+  
+        reconstr_loss = (reconstr_loss + style_reconstruction)/2
 
         s_generations = self.style_encoder(merged_generations, training=True)
         c_generations = self.content_encoder(merged_generations, training=True)
