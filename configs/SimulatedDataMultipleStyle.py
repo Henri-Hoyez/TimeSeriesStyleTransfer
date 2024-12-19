@@ -36,7 +36,7 @@ class Proposed:
     discrinator_step = 1
 
     ##### Generator loss parameters.
-    l_reconstr = 2.
+    l_reconstr = 3.
     l_local =  1.5
     l_global = 1.5
     l_style_preservation = 2.

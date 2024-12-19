@@ -30,9 +30,13 @@ def linear_projection(style_input:Layer, actual_seq_len:int):
 
     return adapter
 
-def upsampling_block(content_input:Layer, style_input:Layer, filters):
+def upsampling_block(content_input:Layer, ec_features, style_input:Layer, filters):
+    
+    _input = Concatenate(axis=-1)([content_input, ec_features])
+    
+    print(content_input.shape, ec_features.shape, _input.shape)
 
-    x_first = Conv1DTranspose(filters, 5, 1, padding='same')(content_input)
+    x_first = Conv1DTranspose(filters, 5, 1, padding='same')(_input)
     actual_sequence_len = x_first.shape[1]
     
     adapted_style_input = linear_projection(style_input, actual_sequence_len)
@@ -54,39 +58,34 @@ def upsampling_block(content_input:Layer, style_input:Layer, filters):
     return x
 
 
+def generator_part(content_inputs, style_input):
 
+    [d1, d2, d3, x] = content_inputs
 
-def generator_part(content_input, style_input):
+    x = upsampling_block(x, d3, style_input, 16) # 16
 
-    x = upsampling_block(content_input, style_input, 16) # 16
-
-    x = upsampling_block(x, style_input, 32) # 32
+    x = upsampling_block(x, d2, style_input, 32) # 32
     
-    x = upsampling_block(x, style_input, 64)  # 64
+    x = upsampling_block(x, d1, style_input, 64)  # 64
     
-    # x = upsampling_block_v2(x, style_input, 32)  # 128
-    
-    # x = upsampling_block_v2(x, style_input, 32)  # 256
     # output
     x = Conv1DTranspose(1, 5, 1, padding='same')(x)
     
-    
-
     return x
 
-def make_generator(n_sample_wiener:int, feat_wiener:int, style_vector_size:int, n_generators:int):
+def make_generator(n_sample_wiener:int, feat_wiener:int, style_vector_size:int, n_generators:int, ec_outputs: list):
     init = RandomNormal()
 
-    input = Input((n_sample_wiener, feat_wiener), name=f"Content_Input")
+    content_inputs = [Input(eci.shape[1:]) for eci in ec_outputs]
     style_input = Input((style_vector_size,), name="Style_Input") 
     gens_outputs = []
 
 
     for _ in range(n_generators):
-        gens_outputs.append(generator_part(input, style_input))
+        gens_outputs.append(generator_part(content_inputs, style_input))
         # break
 
-    model = Model([input, style_input], gens_outputs)
+    model = Model([content_inputs, style_input], gens_outputs)
     
     model.summary()
 

@@ -30,15 +30,15 @@ def make_content_encoder(seq_length:int, n_feat:int, feat_wiener:int):
 
     _input = Input((seq_length, n_feat))
 
-    x = downsampling_block(_input, 16)
+    d1 = downsampling_block(_input, 16)
     
-    x = downsampling_block(x, 32)
+    d2 = downsampling_block(d1, 32)
     
-    x = downsampling_block(x, 64)
+    d3 = downsampling_block(d2, 64)
     
-    x = Conv1D(2, 1, 1, padding='same', activation="linear")(x)
+    x = Conv1D(2, 1, 1, padding='same', activation="linear")(d3)
 
-    model = Model(_input, x)
+    model = Model(_input, [d1, d2, d3, x])
     
     # model.summary()
     # exit()

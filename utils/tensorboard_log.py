@@ -31,15 +31,15 @@ class TensorboardLog():
         self.intanciate_loggers(metric_name_list)
 
 
-    def log_train(self, plot_buf, epoch):
-        image = tf.image.decode_png(plot_buf.getvalue(), channels=4)
-        image = tf.expand_dims(image, 0)
+    def log_train(self, epoch):
+        # image = tf.image.decode_png(plot_buf.getvalue(), channels=4)
+        # image = tf.expand_dims(image, 0)
 
         with self.train_summary_writer.as_default():
             for key, value in self.train_loggers.items():
                 tf.summary.scalar(key, value.result(), step=epoch)
 
-            tf.summary.image("Training Generations", image, step=epoch)
+            # tf.summary.image("Training Generations", image, step=epoch)
             
     def get_mean_metric(self, dict, key):
         values = []

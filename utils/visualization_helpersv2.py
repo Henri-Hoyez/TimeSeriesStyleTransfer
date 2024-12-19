@@ -65,7 +65,7 @@ def plot_generated_sequence(
     
     c = np.array([content_sequences[0]])
     c = content_encoder(c)
-    content_encoded = tf.concat([c]*seed_style_sequences.shape[0], 0)
+    content_encoded = tf.concat([c]*n_style, 0)
     
     reshaped_style_sequences = tf.reshape(seed_style_sequences, (-1, seed_style_sequences.shape[-2], seed_style_sequences.shape[-1]))
 
@@ -171,8 +171,8 @@ def plot_generated_sequence(
      
     for i in range(n_style):
         colors[2*i+1]
-        draw_content_space(ax10, content_of_style_sequences[i], color=colors[2*i], label=f"content space Real style {i+1}", arrow_width=.0005*diag)
-        draw_content_space(ax10, content_of_generated_viz[i], color=colors[2*i+1], label=f"content space Gen  style {i+1}", arrow_width=.0005*diag)
+        draw_content_space(ax10, content_of_style_sequences[i][-1], color=colors[2*i], label=f"content space Real style {i+1}", arrow_width=.0005*diag)
+        draw_content_space(ax10, content_of_generated_viz[i][-1], color=colors[2*i+1], label=f"content space Gen  style {i+1}", arrow_width=.0005*diag)
         
         ax11.scatter(
             reduced_style[i, :150, 0], 
@@ -229,6 +229,7 @@ def plot_multistyle_sequences(
     _min, _max = np.min(all_values)-0.5, np.max(all_values)+ 0.5
     
     cacateneted = tf.concat((real_content_space, gen_content_space), 0)
+    
     x_min, x_max = np.min(cacateneted[:, 0]),  np.max(cacateneted[:, 0])
     y_min, y_max =  np.min(cacateneted[:, 1]),  np.max(cacateneted[:, 1])
     diag = np.sqrt((x_max - x_min)**2 + (y_max - y_min)**2)

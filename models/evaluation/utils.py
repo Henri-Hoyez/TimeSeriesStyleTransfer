@@ -6,13 +6,16 @@ import tensorflow as tf
 import argparse
 
 from configs.mts_style_transfer_v1.args import AmplitudeShiftArgs as args
-from models.Layers.AdaIN import AdaIN
+
+from models.Layers.AdaIN import AdaIN, Moments
+from models.mtsStyleTransferV1.StyleEncoder import NormLayer
 from utils import dataLoader, simple_metric, eval_methods
 import numpy as np
 import json
 from models.evaluation import eval_classifiers
 
 from tensorflow.python.keras.models import load_model, Model
+from tensorflow.keras import Model
 
 
 def parse_arguments():
@@ -36,10 +39,9 @@ def parse_arguments():
     return arguments
 
 def load_models(root_folder:str):
-    
-    content_encoder = load_model(f"{root_folder}/content_encoder.h5")
-    decoder = load_model(f"{root_folder}/decoder.h5", custom_objects={'AdaIN':AdaIN})
-    style_encoder = load_model(f"{root_folder}/style_encoder.h5")
+    content_encoder = tf.keras.models.load_model(f"{root_folder}/content_encoder.h5")
+    style_encoder = tf.keras.models.load_model(f"{root_folder}/style_encoder.h5", custom_objects={"NormLayer":NormLayer})
+    decoder = tf.keras.models.load_model(f"{root_folder}/decoder.h5", custom_objects={"Moments":Moments, 'AdaIN':AdaIN})
 
     return content_encoder, style_encoder, decoder
 

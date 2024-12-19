@@ -58,7 +58,8 @@ class Trainer():
 
         self.content_encoder = ContentEncoder.make_content_encoder(sequence_length, n_signals, feat_wiener)
         self.style_encoder = StyleEncoder.make_style_encoder(sequence_length, n_signals, style_vector_size)
-        self.decoder = Decoder.make_generator(n_sample_wiener, feat_wiener, style_vector_size ,n_signals)
+        
+        self.decoder = Decoder.make_generator(n_sample_wiener, feat_wiener, style_vector_size ,n_signals, self.content_encoder.outputs)
         self.global_discriminator = GlobalDiscriminator.make_global_discriminator(sequence_length, n_signals, n_styles)
         self.local_discriminator = LocalDiscriminator.create_local_discriminator(n_signals, sequence_length, n_styles)
         
@@ -67,6 +68,7 @@ class Trainer():
         
         self.prepare()
         self.prepare_loggers(n_styles)
+        # exit()
 
 
     def plot_models(self):
@@ -109,7 +111,6 @@ class Trainer():
             
             print("[+] Train Step...")  
             for i, (content_batch, style_batch) in enumerate(zip(self.dset_content_train, self.dsets_style_train)):
-
                 content_sequence1 = content_batch[:int(self.batch_size)]
                 content_sequence2 = content_batch[int(self.batch_size):]
     
@@ -177,19 +178,20 @@ class Trainer():
             save_to = f"{self.logger.full_path}/{epoch}_{i}.png"  
         
             # Generate Sequences with the same content and all styles.
-            content_of_content = self.content_encoder(np.array([content_sequence]))
-            content_for_generation = np.array([content_of_content] * self.seed_styles_valid.shape[1])
-            shape = content_for_generation.shape
-            content_for_generation = content_for_generation.reshape((-1, shape[-2], shape[-1]))
+            
+            content_sequences = tf.convert_to_tensor([content_sequence]* self.seed_styles_valid.shape[1])
+            content_of_content = self.content_encoder(content_sequences)
             
             # Make the Style Space for the Real and Simulated Sequences.
-            real_style_space = np.array([ self.style_encoder(style_sequences) for style_sequences in self.seed_styles_valid ])
+            real_style_space = [ self.style_encoder(style_sequences) for style_sequences in self.seed_styles_valid ]
             
             # Generate sequence of different style, but with the same content.
-            generated_sequences = np.array([ tf.concat(self.decoder([content_for_generation, style_vectors]), -1) for style_vectors in real_style_space ])
+            
+            generated_sequences = np.array([ tf.concat(self.decoder([content_of_content, style_vectors]), -1) for style_vectors in real_style_space ])
             
             # Extract the content.
-            content_of_gens = np.array([ self.content_encoder(generated_sequence) for generated_sequence in generated_sequences ])
+            content_of_gens = np.array([ self.content_encoder(generated_sequence)[-1] for generated_sequence in generated_sequences ])
+                        
             
             # Extract the style.
             style_of_gen = np.array([ self.style_encoder(generated_sequence) for generated_sequence in generated_sequences ])
@@ -204,12 +206,14 @@ class Trainer():
             
             real_reduced_styles = np.array([ pca.transform(particular_style_space) for particular_style_space in real_style_space ])
             gen_reduced_styles = np.array([ pca.transform(particular_style_space) for particular_style_space in style_of_gen ])
+                        
+            viz_content_of_content = np.expand_dims(content_of_content[-1][0], 0) # Take only the output of the encoder of one sequence.
                     
             visualization_helpersv2.plot_multistyle_sequences(
                 content_sequence, 
                 self.seed_styles_valid[:, 0], 
                 generated_sequences[:, 0], 
-                content_of_content, content_of_gens[:, 0],
+                viz_content_of_content, content_of_gens[:, 0],
                 real_reduced_styles, gen_reduced_styles,
                 epoch, save_to
                 )
@@ -220,21 +224,21 @@ class Trainer():
         mean_acc = self.classif_metric.evaluate(self.content_encoder, self.style_encoder, self.decoder)
         self.logger.valid_loggers["00 - Model Classification Acc"](mean_acc)
         
-        generation_style_train = np.array([self.generate(self.seed_content_train, style_train) for style_train in self.seed_styles_train])
-        generation_style_valid = np.array([self.generate(self.seed_content_valid, style_train) for style_train in self.seed_styles_valid])
+        # generation_style_train = np.array([self.generate(self.seed_content_train, style_train) for style_train in self.seed_styles_train])
+        # generation_style_valid = np.array([self.generate(self.seed_content_valid, style_train) for style_train in self.seed_styles_valid])
 
         # self.metric_evaluation(generation_style1_train, generation_style1_valid, generation_style2_train, generation_style2_valid)
         
-        self.simple_noise_metric(generation_style_train, generation_style_valid, epoch)
+        # self.simple_noise_metric(generation_style_train, generation_style_valid, epoch)
 
-        self.simple_amplitude_metric(generation_style_train, generation_style_valid, epoch)
+        # self.simple_amplitude_metric(generation_style_train, generation_style_valid, epoch)
 
-        plot_buff = self.make_viz()
+        # plot_buff = self.make_viz()
         
         # Make multistyle visualization. 
         self.multistyle_viz(epoch)
         
-        self.logger.log_train(plot_buff, epoch)
+        self.logger.log_train(epoch)
         self.logger.log_valid(epoch)
             
 
@@ -538,7 +542,6 @@ class Trainer():
 
             reconstr_loss = losses.recontruction_loss(contents, id_generated)
         
-            
             ####
             styles = tf.concat([style_sequences, style_sequences], 0)   
             style_label_extended = tf.concat([style_labels, style_labels], 0)   
@@ -577,7 +580,7 @@ class Trainer():
             global_realness_loss = losses.least_square_generator_loss(crit_on_fake)
 
             ########
-            content_preservation = losses.fixed_point_content(encoded_content, c_generations)
+            content_preservation = losses.fixed_point_content(encoded_content[-1], c_generations[-1])
 
             s_c1_s = s_generations[:_bs]
             s_c2_s = s_generations[_bs:]
@@ -671,7 +674,7 @@ class Trainer():
         global_realness_loss = losses.least_square_generator_loss(crit_on_fake)
 
         ########
-        content_preservation = losses.fixed_point_content(encoded_content, c_generations)
+        content_preservation = losses.fixed_point_content(encoded_content[-1], c_generations[-1])
 
         s_c1_s = s_generations[:_bs]
         s_c2_s = s_generations[_bs:]

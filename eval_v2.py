@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+# os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import tensorflow as tf
 
@@ -60,7 +61,7 @@ def stylize(
     
     style_vector = style_encoder(style_sequence)
 
-    translated = content_space.map(lambda c: tf.concat(decoder([c, style_vector], training=False), -1), num_parallel_calls=tf.data.AUTOTUNE).cache()
+    translated = content_space.map(lambda d1, d2, d3, x: tf.concat(decoder([[d1, d2, d3, x], style_vector], training=False), -1), num_parallel_calls=tf.data.AUTOTUNE).cache()
     dset_final = tf.data.Dataset.zip((translated, labels))
 
     return dset_final
@@ -69,7 +70,7 @@ def generate_real_fake_datasets(training_params, ce, se, de):
     real_style_dataset = {}
     fake_style_dataset = {}
     style_names = []
-    bs = 256 #args().simulated_arguments.batch_size
+    bs = args().simulated_arguments.batch_size
 
     dset_content_train, dset_content_valid = utils.load_dset(training_params["dset_content"], training_params, drop_labels=False, bs=bs)
 
@@ -109,19 +110,22 @@ def tstr(
     dset_valid_real,
     dset_train_fake, 
     dset_valid_fake, 
-    save_to:str):
+    save_to:str,
+    epochs = 50):
+    
+    
 
     print('[+] Train Real, Test Real.')
-    trtr_perfs, trtr_hist = eval_methods.train_naive_discriminator(dset_train_real, dset_valid_real, args(), epochs=50, n_classes=5)
+    trtr_perfs, trtr_hist = eval_methods.train_naive_discriminator(dset_train_real, dset_valid_real, args(), epochs=epochs, n_classes=5)
 
     print("[+] Train Synthetic, Test Synthetic")
-    _, tsts_hist = eval_methods.train_naive_discriminator(dset_train_fake, dset_valid_fake, args(), epochs=50, n_classes=5)
+    _, tsts_hist = eval_methods.train_naive_discriminator(dset_train_fake, dset_valid_fake, args(), epochs=epochs, n_classes=5)
     
     print("[+] Train Synthetic, Test Real")
-    tstr_perfs, tstr_hist = eval_methods.train_naive_discriminator(dset_train_fake, dset_valid_real, args(), epochs=50, n_classes=5)
+    tstr_perfs, tstr_hist = eval_methods.train_naive_discriminator(dset_train_fake, dset_valid_real, args(), epochs=epochs, n_classes=5)
     
     print("[+] Train Real, Test Synthetic")
-    _, trts_hist = eval_methods.train_naive_discriminator(dset_train_real, dset_valid_fake, args(), epochs=50, n_classes=5)
+    _, trts_hist = eval_methods.train_naive_discriminator(dset_train_real, dset_valid_fake, args(), epochs=epochs, n_classes=5)
     
     fig = plt.figure(figsize=(18, 10))
     
@@ -452,7 +456,10 @@ def make_lattent_space_representation(content_sequences, style_datasets, style_n
     cmap = plt.get_cmap("tab20")
     colors = cmap(np.linspace(0, 1, n_style*2))
     
+    
     for label, content_sequence in enumerate(content_sequences):
+        style_from_real = []
+        style_from_gen = []
         
         fig = plt.figure(figsize=(18, 10))
     
@@ -473,6 +480,7 @@ def make_lattent_space_representation(content_sequences, style_datasets, style_n
         ax_style_space.grid()
         
         for i, style_ in enumerate(style_names):
+ 
             real_style_sequences = next(iter(style_datasets[f"{style_}_valid"]))[0]
             duplicated_contents = np.array([content_sequence]*real_style_sequences.shape[0])
                                     
@@ -481,35 +489,44 @@ def make_lattent_space_representation(content_sequences, style_datasets, style_n
             fake_sequences = de([real_content_path, real_style_points])
             
             fake_sequences = tf.concat(fake_sequences, -1)
-                        
+                                    
             fake_content_paths = ce(fake_sequences)
             fake_style_points = se(fake_sequences)
             
-            visualization_helpersv2.draw_content_space(ax_content_space, fake_content_paths[0], color=colors[2*i+1], label=f"Gen Seq Style {i}.")
+            style_from_real.append(real_style_points)
+            style_from_gen.append(fake_style_points)
             
-            reducer = PCA(n_components=2)
-            reducer.fit(real_style_points)
+            visualization_helpersv2.draw_content_space(ax_content_space, fake_content_paths[-1][-1], color=colors[2*i+1], label=f"Gen Seq Style {i}.")
             
-            reduced_real_style_points = reducer.transform(real_style_points)
-            reduced_fake_style_points = reducer.transform(fake_style_points)
-                    
+        all_styles = tf.concat([style_from_real, style_from_gen], 0)  
+        all_styles = tf.reshape(all_styles, (-1, all_styles.shape[-1]))  
+        
+        reducer = PCA(n_components=2)
+        reducer.fit(all_styles)
+        
+        real_reduced_styles = np.array([ reducer.transform(particular_style_space) for particular_style_space in style_from_real ])
+        gen_reduced_styles = np.array([ reducer.transform(particular_style_space) for particular_style_space in style_from_gen ])
+        
+        
+        for i in range(len(style_from_real)):
+                
             ax_style_space.scatter(
-                reduced_real_style_points[:150, 0], 
-                reduced_real_style_points[:150, 1], 
+                real_reduced_styles[i, :150, 0], 
+                real_reduced_styles[i, :150, 1], 
                 label=f'Real Style {i}.', 
                 alpha=0.25, 
                 color=colors[2*i]
             )
         
             ax_style_space.scatter(
-                reduced_fake_style_points[:150, 0], 
-                reduced_fake_style_points[:150, 1], 
+                gen_reduced_styles[i, :150, 0], 
+                gen_reduced_styles[i, :150, 1], 
                 label=f'Gen Style {i}.', 
                 alpha=0.25, 
                 color=colors[2*i+ 1]
             )
         
-        visualization_helpersv2.draw_content_space(ax_content_space, real_content_path[0], color=colors[0], label=f'Real content sequence')
+        visualization_helpersv2.draw_content_space(ax_content_space, real_content_path[-1][-1], color=colors[0], label=f'Real content sequence')
         ax_content_space.legend(bbox_to_anchor=(-.1, 1.038), loc='upper right')
         ax_style_space.legend(bbox_to_anchor=(1.0, 1.038), loc='upper left')
         
@@ -536,7 +553,7 @@ def plot_classif_metric(histories, save_to:str):
     for key, value in histories.items():
         loss_axis.plot(value.history["loss"], ".-", label=f"{key}")
         
-        acc_axis.plot(value.history["accuracy"], ".-", label=f"{key}")
+        acc_axis.plot(value.history["sparse_categorical_accuracy"], ".-", label=f"{key}")
     
     loss_axis.grid()
     loss_axis.legend()
@@ -549,7 +566,7 @@ def plot_classif_metric(histories, save_to:str):
     plt.savefig(save_to)
     
 
-def classification_on_lattent_space(real_dataset: dict, encoder:Model, style_names: list, training_parameters: dict, epochs=10):
+def classification_on_content_space(real_dataset: dict, encoder:Model, style_names: list, training_parameters: dict, epochs=1):
     # Le but est de savoir si notre content space disposes 
     # Des informations de classes.
     # Nous allons entrainer un model quelconque sur le content space 
@@ -561,15 +578,50 @@ def classification_on_lattent_space(real_dataset: dict, encoder:Model, style_nam
     histories = dict()
     evaluations = dict()
     
-    classif_input_shape = encoder.output_shape[1:]
+    classif_input_shape = encoder.outputs[-1].shape[1:]
     
     for style in style_names:
         print(f"[+] Train on content space for {style}...")
         dset_train = real_dataset[f"{style}_train"]
-        dset_train = dset_train.map(lambda seq, label: (encoder(seq), label))
+        dset_train = dset_train.map(lambda seq, label: (encoder(seq)[-1], label))
         
         dset_valid = real_dataset[f"{style}_valid"]
-        dset_valid = dset_valid.map(lambda seq, label: (encoder(seq), label))
+        dset_valid = dset_valid.map(lambda seq, label: (encoder(seq)[-1], label))
+        
+        model = make_naive_discriminator(classif_input_shape, 5)
+                
+        history = model.fit(dset_train, validation_data=dset_valid, epochs=epochs)
+        
+        model.evaluate(dset_valid)
+        
+        histories[style] = history
+        evaluations[style] = model.evaluate(dset_valid)[1]
+        
+    return histories, evaluations
+
+
+def classification_on_style_space(real_dataset: dict, encoder:Model, style_names: list, training_parameters: dict, epochs=1):
+    
+    print('[+] Classification on Content Space.')
+    histories = dict()
+    evaluations = dict()
+    
+    classif_input_shape = encoder.output_shape
+    
+    
+    def inner_fn(seq):
+        x = encoder(seq)
+        return tf.reshape(x, (1, classif_input_shape))
+    
+    
+    for style in style_names:
+        print(f"[+] Train on content space for {style}...")
+        
+        dset_train = real_dataset[f"{style}_train"]
+        dset_train = dset_train.map(lambda seq, label: ((inner_fn(seq)), label))
+        
+        dset_valid = real_dataset[f"{style}_valid"]
+        dset_valid = dset_valid.map(lambda seq, label: (inner_fn(seq), label))
         
         model = make_naive_discriminator(classif_input_shape, 5)
                 
@@ -650,6 +702,7 @@ def main():
     
     dsets_real, dsets_fake = generate_real_fake_datasets(training_params, ce, se, de)
     
+    
     dset_real_cont_train, dset_real_cont_valid = dataLoader.loading_wrapper(
         training_params["dset_content"], 
         training_params["sequence_lenght_in_sample"], 
@@ -674,19 +727,20 @@ def main():
     
     
     print(f"[+] Classification on content space.")
-    content_classif_hist, content_classif_accs = classification_on_lattent_space(dsets_real, ce, style_names, training_params)
+    content_classif_hist, content_classif_accs = classification_on_content_space(dsets_real, ce, style_names, training_params)
     plot_classif_metric(content_classif_hist, f"{model_folder}/classif_on_content_losses.png")
     pd.DataFrame().from_dict(content_classif_accs).to_excel(f"{model_folder}/evaluation_content_space_classification.xlsx")
     
+    # print(f"[+] Classification on Style space.")
+    # style_classif_hist, style_classif_accs = classification_on_style_space(dsets_real, se, style_names, training_params)
+    # plot_classif_metric(style_classif_hist, f"{model_folder}/classif_on_style_losses.png")
+    # pd.DataFrame().from_dict(style_classif_accs).to_excel(f"{model_folder}/evaluation_style_space_classification.xlsx")
     
-    print(f"[+] Classification on Style space.")
-    style_classif_hist, style_classif_accs = classification_on_lattent_space(dsets_real, se, style_names, training_params)
-    plot_classif_metric(style_classif_hist, f"{model_folder}/classif_on_style_losses.png")
-    pd.DataFrame().from_dict(style_classif_accs).to_excel(f"{model_folder}/evaluation_style_space_classification.xlsx")
     
-    content_space_accs = is_content_space_domain_invariant(dset_real_cont_train, dset_real_cont_valid, 
-                                                           dsets_real, ce, style_names, f"{model_folder}/domain_invariance_test_learning.png")
-    pd.DataFrame().from_dict(content_space_accs).to_excel(f"{model_folder}/evaluation_style_space_classification.xlsx")
+    # content_space_accs = is_content_space_domain_invariant(dset_real_cont_train, dset_real_cont_valid, 
+    #                                                        dsets_real, ce, style_names, f"{model_folder}/domain_invariance_test_learning.png")
+    
+    # pd.DataFrame().from_dict(content_space_accs).to_excel(f"{model_folder}/evaluation_style_space_classification.xlsx")
     
     
     df_noises, df_ampl, df_time_shift = compute_metrics(dsets_real, dsets_fake, style_names, model_folder)
@@ -701,6 +755,8 @@ def main():
     dimentionality_reduction_plot(real_batches, fake_batches, style_names, model_folder, "tsne")
     
     tstr_stats = tstr_on_styles(dsets_real, dsets_fake, style_names, model_folder)
+    
+    
     
 
 
